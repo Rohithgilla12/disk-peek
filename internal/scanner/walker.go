@@ -10,6 +10,7 @@ import (
 
 // WalkDirectory calculates the total size of a directory recursively
 // It skips symlinks and tracks inodes to avoid double-counting hardlinked files
+// Uses actual disk blocks to handle sparse files correctly
 func WalkDirectory(root string) WalkResult {
 	result := WalkResult{Path: root}
 
@@ -27,13 +28,18 @@ func WalkDirectory(root string) WalkResult {
 
 	// If it's a file, just return its size
 	if !info.IsDir() {
-		result.Size = info.Size()
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			result.Size = stat.Blocks * 512
+		} else {
+			result.Size = info.Size()
+		}
 		result.FileCount = 1
 		return result
 	}
 
 	// Track seen inodes to avoid counting hardlinked files multiple times
 	seenInodes := make(map[uint64]bool)
+	var mu sync.Mutex
 
 	// Walk the directory tree
 	err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
@@ -48,25 +54,32 @@ func WalkDirectory(root string) WalkResult {
 		}
 
 		if d.IsDir() {
+			mu.Lock()
 			result.DirCount++
+			mu.Unlock()
 		} else {
 			info, err := d.Info()
 			if err == nil {
 				// Get the inode and actual disk usage (handles sparse files and hardlinks)
 				if stat, ok := info.Sys().(*syscall.Stat_t); ok {
 					inode := stat.Ino
+					mu.Lock()
 					// Skip if we've already counted this inode (hardlinks)
 					if seenInodes[inode] {
+						mu.Unlock()
 						return nil
 					}
 					seenInodes[inode] = true
 					// Use actual disk blocks instead of logical size (handles sparse files)
-					// Blocks are in 512-byte units
 					result.Size += stat.Blocks * 512
+					result.FileCount++
+					mu.Unlock()
 				} else {
+					mu.Lock()
 					result.Size += info.Size()
+					result.FileCount++
+					mu.Unlock()
 				}
-				result.FileCount++
 			}
 		}
 
@@ -74,6 +87,131 @@ func WalkDirectory(root string) WalkResult {
 	})
 
 	result.Error = err
+	return result
+}
+
+// WalkDirectoryFast is an optimized parallel directory walker
+// It uses bounded parallelism with a semaphore to maximize throughput
+func WalkDirectoryFast(root string, numWorkers int) WalkResult {
+	result := WalkResult{Path: root}
+
+	info, err := os.Lstat(root)
+	if err != nil {
+		result.Error = err
+		return result
+	}
+
+	if info.Mode()&os.ModeSymlink != 0 {
+		return result
+	}
+
+	if !info.IsDir() {
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			result.Size = stat.Blocks * 512
+		} else {
+			result.Size = info.Size()
+		}
+		result.FileCount = 1
+		return result
+	}
+
+	if numWorkers <= 0 {
+		numWorkers = 8
+	}
+
+	// Semaphore to limit concurrency
+	sem := make(chan struct{}, numWorkers)
+
+	// Thread-safe result accumulation
+	var totalSize int64
+	var totalFiles int64
+	var totalDirs int64
+	var mu sync.Mutex
+
+	// Track seen inodes to avoid counting hardlinks multiple times
+	seenInodes := make(map[uint64]bool)
+	var inodeMu sync.Mutex
+
+	var wg sync.WaitGroup
+
+	// Recursive directory walker with bounded parallelism
+	var walkDir func(dirPath string)
+	walkDir = func(dirPath string) {
+		defer wg.Done()
+
+		entries, err := os.ReadDir(dirPath)
+		if err != nil {
+			return
+		}
+
+		var localSize int64
+		var localFiles int64
+		var localDirs int64
+
+		for _, entry := range entries {
+			// Skip symlinks
+			if entry.Type()&os.ModeSymlink != 0 {
+				continue
+			}
+
+			fullPath := filepath.Join(dirPath, entry.Name())
+
+			if entry.IsDir() {
+				localDirs++
+				// Try to acquire semaphore for parallel processing
+				select {
+				case sem <- struct{}{}:
+					// Got a slot, process in parallel
+					wg.Add(1)
+					go func(path string) {
+						walkDir(path)
+						<-sem // Release slot
+					}(fullPath)
+				default:
+					// No slot available, process inline
+					wg.Add(1)
+					walkDir(fullPath)
+				}
+			} else {
+				entryInfo, err := entry.Info()
+				if err != nil {
+					continue
+				}
+
+				if stat, ok := entryInfo.Sys().(*syscall.Stat_t); ok {
+					inode := stat.Ino
+					inodeMu.Lock()
+					if seenInodes[inode] {
+						inodeMu.Unlock()
+						continue
+					}
+					seenInodes[inode] = true
+					inodeMu.Unlock()
+					localSize += stat.Blocks * 512
+				} else {
+					localSize += entryInfo.Size()
+				}
+				localFiles++
+			}
+		}
+
+		// Accumulate local results
+		mu.Lock()
+		totalSize += localSize
+		totalFiles += localFiles
+		totalDirs += localDirs
+		mu.Unlock()
+	}
+
+	// Start walking from root
+	wg.Add(1)
+	walkDir(root)
+	wg.Wait()
+
+	result.Size = totalSize
+	result.FileCount = int(totalFiles)
+	result.DirCount = int(totalDirs) + 1 // Include root directory
+
 	return result
 }
 

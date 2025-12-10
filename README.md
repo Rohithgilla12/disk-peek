@@ -1,104 +1,120 @@
-# Wails + Vite + React + Tailwind CSS v4 + shadcn/ui + TypeScript
+# Disk Peek
 
-A modern Wails template featuring the latest technologies for building beautiful desktop applications.
+A lightweight macOS disk cleanup utility with a beautiful UI.
 
-## 🚀 Features
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg)
 
-- **[Wails v2.11.0](https://wails.io/)** - Build desktop apps using Go & Web Technologies
-- **[React 18.3](https://react.dev/)** - Modern React with hooks
-- **[TypeScript 5.7](https://www.typescriptlang.org/)** - Type safety and better DX
-- **[Vite 5.4](https://vitejs.dev/)** - Lightning-fast HMR and build tool
-- **[Tailwind CSS v4](https://tailwindcss.com/)** - Latest Tailwind with new Vite plugin
-- **[shadcn/ui](https://ui.shadcn.com/)** - Beautiful, accessible component library
-- **[ESLint 9](https://eslint.org/)** - Code quality with flat config
-- **Cross-platform build scripts** - Easy builds for Windows, macOS, and Linux
+## Features
 
-## 📦 Installation
+Disk Peek offers two scanning modes:
+
+### Normal Mode
+Full filesystem scan showing your entire directory hierarchy. Like DaisyDisk but with better UX.
+- Scans from home directory or any selected folder
+- Shows complete directory tree with sizes
+- Drill-down navigation into any folder
+- Find where your storage space went
+
+### Dev Mode
+Targeted scan of developer-specific caches for fast, focused cleanup.
+- Completes in seconds (not minutes)
+- Scans only predefined safe-to-delete locations
+- Categories include:
+  - **Xcode**: DerivedData, Archives, iOS DeviceSupport
+  - **Simulators**: CoreSimulator Devices
+  - **Node.js**: npm cache, yarn cache, pnpm cache
+  - **CocoaPods**: Pod cache
+  - **Rust**: Cargo target directories
+  - **Go**: Module cache
+  - **Gradle/Maven**: Build caches
+  - **Docker**: VM data
+  - **System**: Library Caches, Logs
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Desktop Framework | [Wails](https://wails.io/) v2 |
+| Backend | Go 1.23 |
+| Frontend | React 18 + TypeScript |
+| Build Tool | Vite 5 |
+| Styling | Tailwind CSS v4 |
+| Components | shadcn/ui |
+
+## Getting Started
+
+### Prerequisites
+
+- Go 1.23+
+- Node.js 18+
+- [Wails CLI](https://wails.io/docs/gettingstarted/installation)
+
+### Development
 
 ```bash
-wails init -n myapp -t https://github.com/Mahcks/wails-vite-react-tailwind-shadcnui-ts
-cd myapp
-```
+# Install frontend dependencies
+cd frontend && npm install && cd ..
 
-## 🛠️ Development
-
-Run the app in development mode with hot reload:
-
-```bash
+# Run in development mode
 wails dev
 ```
 
-The frontend dev server runs on http://localhost:5173 with Vite's fast HMR.
+### Building
 
-## 🏗️ Building
-
-### Current Platform
 ```bash
+# Build for current platform
 wails build
-# or
-./scripts/build.sh
-```
 
-### Cross-Platform Builds
-```bash
-# Build for all platforms
-./scripts/build-all.sh
-
-# Individual platforms
-./scripts/build-windows.sh      # Windows AMD64
-./scripts/build-linux.sh         # Linux AMD64
+# Build scripts for specific platforms
 ./scripts/build-macos-arm.sh     # macOS Apple Silicon
 ./scripts/build-macos-intel.sh   # macOS Intel
-./scripts/build-macos-universal.sh  # macOS Universal Binary
+./scripts/build-macos-universal.sh  # macOS Universal
 ```
 
 Built applications will be in `build/bin/`
 
-## 🎨 shadcn/ui Components
-
-This template includes pre-configured shadcn/ui components:
-- Button
-- Input
-- Label
-- Card
-
-Add more components:
-```bash
-npx shadcn@latest add [component-name]
-```
-
-Browse components at [ui.shadcn.com](https://ui.shadcn.com/)
-
-## 📁 Project Structure
+## Project Structure
 
 ```
-.
-├── app.tmpl.go              # Main application logic
-├── main.tmpl.go             # Entry point
-├── frontend/
+disk-peek/
+├── main.go                 # Wails app entry point
+├── app.go                  # Application backend & exposed methods
+├── internal/
+│   ├── scanner/            # Core disk scanning logic
+│   │   ├── types.go        # Shared data structures
+│   │   ├── categories.go   # Dev mode category definitions
+│   │   ├── devscan.go      # Dev mode scanner
+│   │   ├── normalscan.go   # Normal mode scanner
+│   │   └── walker.go       # Directory walking utilities
+│   └── cleaner/            # Deletion logic (move to Trash)
+├── frontend/               # React frontend
 │   ├── src/
-│   │   ├── App.tsx          # Main React component
-│   │   ├── components/ui/   # shadcn/ui components
-│   │   └── lib/utils.ts     # Utility functions
-│   ├── vite.config.ts       # Vite configuration
-│   └── package.json         # Frontend dependencies
-└── scripts/                 # Build scripts
+│   │   ├── App.tsx
+│   │   ├── components/     # UI components
+│   │   └── hooks/          # React hooks
+│   └── wailsjs/            # Auto-generated Wails bindings
+└── scripts/                # Build scripts
 ```
 
-## 🔧 Configuration
+## Safety
 
-Project configuration is in `wails.json` (auto-generated on `wails init`). 
+- **Move to Trash**: Files are moved to Trash by default (recoverable)
+- **Safe categories**: Dev mode only targets developer caches that are safe to delete
+- **No surprises**: Always shows exactly what will be cleaned before deletion
 
-See [Wails documentation](https://wails.io/docs/reference/project-config) for all options.
+## Roadmap
 
-## 📚 Learn More
+- [ ] Implement cleaning functionality (move to Trash)
+- [ ] Add progress indicators during cleaning
+- [ ] Settings panel (toggle categories, permanent delete option)
+- [ ] Menu bar quick-access mode
+- [ ] Find node_modules across all projects
 
-- [Wails Documentation](https://wails.io/docs/introduction)
-- [React Documentation](https://react.dev/)
-- [Vite Documentation](https://vitejs.dev/)
-- [Tailwind CSS Documentation](https://tailwindcss.com/)
-- [shadcn/ui Documentation](https://ui.shadcn.com/)
+## License
 
-## 📝 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-This template is available as open source under the terms of the MIT License.
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.

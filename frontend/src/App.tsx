@@ -10,7 +10,7 @@ import {
 } from "@/components/disk-peek";
 import type { scanner } from "../wailsjs/go/models";
 import { useScan } from "@/hooks/useScan";
-import { RefreshCw, Clock } from "lucide-react";
+import { RefreshCw, Clock, HardDrive, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function App() {
@@ -31,38 +31,30 @@ function App() {
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)] noise-overlay">
       {/* Header */}
-      <header className="flex-shrink-0 px-6 py-4 border-b border-[var(--color-border)]">
+      <header className="flex-shrink-0 px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)]/50">
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-[var(--radius-md)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-hover)] flex items-center justify-center shadow-[var(--shadow-md)]">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="3" />
-                <line x1="12" y1="2" x2="12" y2="6" />
-                <line x1="12" y1="18" x2="12" y2="22" />
-              </svg>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-11 h-11 rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-hover)] flex items-center justify-center shadow-[var(--shadow-md)]">
+                <HardDrive size={22} className="text-white" strokeWidth={2} />
+              </div>
+              {/* Sparkle accent */}
+              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--color-warning)] flex items-center justify-center">
+                <Sparkles size={10} className="text-white" />
+              </div>
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-[var(--color-text)] tracking-tight">
+              <h1 className="text-xl font-bold text-[var(--color-text)] tracking-tight">
                 Disk Peek
               </h1>
               <p className="text-xs text-[var(--color-text-muted)]">
-                {mode === "dev" ? "Developer Cache Cleaner" : "Disk Analyzer"}
+                {mode === "dev" ? "Clean up dev clutter" : "Explore your storage"}
               </p>
             </div>
           </div>
 
-          {/* Mode Toggle */}
+          {/* Mode Toggle - Centered */}
           <ModeToggle
             mode={mode}
             onModeChange={handleModeChange}
@@ -70,23 +62,23 @@ function App() {
           />
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 min-w-[160px] justify-end">
             {state === "completed" && (
               <>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={reset}
-                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                  className="gap-2 bg-[var(--color-bg-elevated)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-text-muted)] rounded-[var(--radius-lg)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
                 >
-                  <RefreshCw size={16} className="mr-1.5" />
-                  New Scan
+                  <RefreshCw size={15} />
+                  Scan again
                 </Button>
                 {result && (
-                  <span className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-elevated)] px-3 py-1.5 rounded-full border border-[var(--color-border)]">
                     <Clock size={12} />
-                    {formatDuration(result.scanDuration)}
-                  </span>
+                    <span className="font-mono">{formatDuration(result.scanDuration)}</span>
+                  </div>
                 )}
               </>
             )}
@@ -98,8 +90,13 @@ function App() {
       <main className="flex-1 overflow-hidden p-6">
         {/* Error State */}
         {error && (
-          <div className="mb-4 p-4 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 rounded-[var(--radius-md)]">
-            <p className="text-sm text-[var(--color-danger)]">{error}</p>
+          <div className="mb-4 p-4 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 rounded-[var(--radius-lg)]">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--color-danger)]/20 flex items-center justify-center">
+                <span className="text-sm">⚠️</span>
+              </div>
+              <p className="text-sm text-[var(--color-danger)] font-medium">{error}</p>
+            </div>
           </div>
         )}
 
@@ -127,14 +124,22 @@ function App() {
       </main>
 
       {/* Footer */}
-      <footer className="flex-shrink-0 px-6 py-3 border-t border-[var(--color-border)]">
-        <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-          <span>
-            {mode === "dev"
-              ? "Scanning developer caches only"
-              : "Full disk analysis"}
+      <footer className="flex-shrink-0 px-6 py-3 border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)]/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${state === "scanning" ? "bg-[var(--color-warning)] animate-pulse" : "bg-[var(--color-success)]"}`} />
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {state === "scanning"
+                ? "Scanning in progress..."
+                : mode === "dev"
+                  ? "Ready to clean dev caches"
+                  : "Ready to explore"
+              }
+            </span>
+          </div>
+          <span className="text-xs text-[var(--color-text-muted)] font-mono bg-[var(--color-bg-elevated)] px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)]">
+            v0.1.0
           </span>
-          <span className="font-mono">v0.1.0</span>
         </div>
       </footer>
     </div>

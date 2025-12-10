@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"os"
-	"path/filepath"
-	"time"
 
 	"disk-peek/internal/scanner"
 
@@ -127,42 +124,4 @@ func (a *App) CleanPaths(paths []string) (scanner.CleanResult, error) {
 		FreedBytes:   0,
 		DeletedPaths: []string{},
 	}, nil
-}
-
-// --- Debug Methods ---
-
-// ExportScanToJSON exports the normal scan results to a JSON file for debugging
-func (a *App) ExportScanToJSON() (string, error) {
-	// Run a scan and export results
-	result := a.normalScanner.Scan()
-
-	// Create output file in Downloads
-	home, _ := os.UserHomeDir()
-	filename := filepath.Join(home, "Downloads", "disk-peek-debug-"+time.Now().Format("2006-01-02-150405")+".json")
-
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return "", err
-	}
-
-	err = os.WriteFile(filename, data, 0644)
-	if err != nil {
-		return "", err
-	}
-
-	return filename, nil
-}
-
-// DebugScanFolder scans a single folder and returns detailed info
-func (a *App) DebugScanFolder(path string) map[string]interface{} {
-	result := scanner.WalkDirectory(path)
-
-	return map[string]interface{}{
-		"path":      path,
-		"size":      result.Size,
-		"sizeHuman": scanner.FormatSize(result.Size),
-		"fileCount": result.FileCount,
-		"dirCount":  result.DirCount,
-		"error":     result.Error,
-	}
 }

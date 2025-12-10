@@ -9,6 +9,8 @@ interface CategoryCardProps {
   onClick?: () => void;
   onSelect?: (selected: boolean) => void;
   isSelected?: boolean;
+  isHighlighted?: boolean;
+  isDimmed?: boolean;
 }
 
 export function CategoryCard({
@@ -16,19 +18,24 @@ export function CategoryCard({
   index,
   totalSize,
   onClick,
+  isHighlighted,
+  isDimmed,
 }: CategoryCardProps) {
   const percentage = totalSize > 0 ? (category.size / totalSize) * 100 : 0;
   const hasChildren = category.children && category.children.length > 0;
+  const maxPercentage = 100; // For progress bar width calculation
 
   return (
     <button
       className={`
         category-card w-full text-left p-4
         bg-[var(--color-bg-elevated)] hover:bg-[var(--color-bg-hover)]
-        border border-[var(--color-border)] hover:border-[var(--color-text-muted)]
+        border border-[var(--color-border)] hover:border-[var(--color-text-muted)]/50
         rounded-[var(--radius-lg)]
         transition-all duration-200
         group cursor-pointer
+        ${isHighlighted ? "bg-[var(--color-bg-hover)] border-[var(--color-text-muted)]/50 scale-[1.01]" : ""}
+        ${isDimmed ? "opacity-50" : "opacity-100"}
       `}
       style={{ animationDelay: `${index * 40}ms` }}
       onClick={onClick}
@@ -36,13 +43,17 @@ export function CategoryCard({
       <div className="flex items-center gap-3">
         {/* Icon with color accent */}
         <div
-          className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center flex-shrink-0"
+          className={`
+            w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center flex-shrink-0
+            transition-transform duration-200
+            ${isHighlighted ? "scale-110" : "group-hover:scale-105"}
+          `}
           style={{ backgroundColor: `${category.color}20` }}
         >
           <CategoryIcon
             icon={category.icon}
             color={category.color}
-            size={20}
+            size={22}
           />
         </div>
 
@@ -64,6 +75,19 @@ export function CategoryCard({
               {category.description}
             </p>
           )}
+
+          {/* Progress bar inside card */}
+          {category.size > 0 && (
+            <div className="mt-2 h-1 rounded-full bg-[var(--color-bg)] overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${(percentage / maxPercentage) * 100}%`,
+                  backgroundColor: category.color,
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Size */}
@@ -78,19 +102,6 @@ export function CategoryCard({
           )}
         </div>
       </div>
-
-      {/* Mini progress bar */}
-      {category.size > 0 && (
-        <div className="mt-3 h-1 rounded-full bg-[var(--color-bg)] overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${Math.max(percentage, 1)}%`,
-              backgroundColor: category.color,
-            }}
-          />
-        </div>
-      )}
     </button>
   );
 }

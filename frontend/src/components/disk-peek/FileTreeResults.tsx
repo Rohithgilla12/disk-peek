@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { Breadcrumbs } from "./Breadcrumbs";
-import { ArrowLeft, Folder, File, ChevronRight, HardDrive } from "lucide-react";
+import { ArrowLeft, Folder, File, ChevronRight, FolderOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GetDirectoryChildren } from "../../../wailsjs/go/main/App";
 
@@ -15,18 +15,18 @@ interface FileTreeResultsProps {
   result: scanner.FullScanResult;
 }
 
-// Color palette for files/folders based on their relative size
+// Warmer color palette for files/folders based on their relative size
 const SIZE_COLORS = [
-  "#ef4444", // red - largest
-  "#f97316", // orange
-  "#f59e0b", // amber
-  "#eab308", // yellow
-  "#84cc16", // lime
-  "#22c55e", // green
-  "#14b8a6", // teal
-  "#06b6d4", // cyan
-  "#3b82f6", // blue
-  "#8b5cf6", // violet - smallest
+  "#ff7f6e", // coral - largest
+  "#ff9966", // peach
+  "#ffab70", // light orange
+  "#f5c45e", // warm yellow
+  "#a8d08d", // sage green
+  "#7dd3a8", // mint
+  "#6ecfcf", // teal
+  "#7dc3e8", // sky blue
+  "#a78bfa", // lavender
+  "#c4b5fd", // light purple - smallest
 ];
 
 function getColorForPercentage(percentage: number): string {
@@ -114,14 +114,14 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
       {/* Header with total size */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--color-text)]">
+          <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">
             {currentLevel.name}
           </h2>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            <span className="font-mono font-semibold text-[var(--color-text)] size-reveal">
+            <span className="font-mono font-bold text-[var(--color-accent)] size-reveal">
               {formatSize(currentTotalSize)}
             </span>{" "}
-            total across {sortedChildren.length} items
+            in {sortedChildren.length} {sortedChildren.length === 1 ? "item" : "items"}
           </p>
         </div>
 
@@ -130,7 +130,7 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
             variant="outline"
             size="sm"
             onClick={handleBack}
-            className="gap-2"
+            className="gap-2 bg-[var(--color-bg-elevated)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-text-muted)] rounded-[var(--radius-lg)]"
             disabled={isLoading}
           >
             <ArrowLeft size={16} />
@@ -140,7 +140,7 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
       </div>
 
       {/* Breadcrumbs */}
-      <div className="mb-4">
+      <div className="mb-5">
         <Breadcrumbs
           items={breadcrumbItems}
           onNavigate={handleBreadcrumbNavigate}
@@ -158,15 +158,21 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
       </div>
 
       {/* File/folder grid */}
-      <div className="flex-1 overflow-y-auto -mx-1 px-1">
+      <div className="flex-1 overflow-y-auto -mx-1 px-1 pb-2">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent)]"></div>
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-16 h-16 rounded-[var(--radius-xl)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center mb-4">
+              <Loader2 size={28} className="text-[var(--color-accent)] animate-spin" />
+            </div>
+            <p className="text-[var(--color-text-muted)]">Loading folder...</p>
           </div>
         ) : sortedChildren.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-[var(--color-text-muted)]">
-            <Folder size={48} className="mb-4 opacity-50" />
-            <p>This directory is empty</p>
+          <div className="flex flex-col items-center justify-center py-16 text-[var(--color-text-muted)]">
+            <div className="w-20 h-20 rounded-[var(--radius-xl)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center mb-4">
+              <FolderOpen size={36} className="text-[var(--color-text-muted)]" />
+            </div>
+            <p className="text-base font-medium text-[var(--color-text-secondary)]">This folder is empty</p>
+            <p className="text-sm mt-1">Nothing to see here</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
@@ -212,7 +218,7 @@ function FileStackedBar({
   const otherSize = nodes.slice(10).reduce((sum, n) => sum + n.size, 0);
 
   return (
-    <div className="h-8 rounded-[var(--radius-md)] overflow-hidden flex bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
+    <div className="h-12 rounded-[var(--radius-xl)] overflow-hidden flex bg-[var(--color-bg-elevated)] border border-[var(--color-border)] shadow-[var(--shadow-sm)]">
       {topNodes.map((node, index) => {
         const percentage = (node.size / totalSize) * 100;
         if (percentage < 0.5) return null;
@@ -224,29 +230,57 @@ function FileStackedBar({
           <button
             key={node.path}
             className={`
-              h-full transition-all duration-200 relative group
-              ${isHighlighted ? "opacity-100 z-10" : "opacity-80 hover:opacity-100"}
+              h-full transition-all duration-300 ease-out relative group
+              first:rounded-l-[var(--radius-lg)] last:rounded-r-[var(--radius-lg)]
+              ${isHighlighted ? "z-10" : ""}
               ${node.isDir ? "cursor-pointer" : "cursor-default"}
             `}
             style={{
               width: `${percentage}%`,
-              backgroundColor: color,
-              transform: isHighlighted ? "scaleY(1.1)" : "scaleY(1)",
+              background: `linear-gradient(180deg, ${color} 0%, ${color}dd 100%)`,
+              opacity: highlightedPath && !isHighlighted ? 0.3 : 1,
+              transform: isHighlighted ? "scaleY(1.15)" : "scaleY(1)",
             }}
             onClick={() => node.isDir && onNodeClick?.(node)}
             title={`${node.name}: ${formatSize(node.size)} (${percentage.toFixed(1)}%)`}
           >
-            {percentage > 8 && (
-              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-white truncate px-1">
+            {percentage > 10 && (
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white truncate px-2 drop-shadow">
                 {node.name}
               </span>
             )}
+
+            {/* Hover tooltip */}
+            <div
+              className="
+                absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-4 py-2.5
+                bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)]
+                text-sm whitespace-nowrap
+                opacity-0 group-hover:opacity-100 pointer-events-none
+                transition-all duration-200 ease-out
+                shadow-[var(--shadow-lg)]
+                z-20
+                group-hover:translate-y-[-4px]
+              "
+            >
+              <div className="flex items-center gap-2.5">
+                {node.isDir ? (
+                  <Folder size={14} style={{ color }} />
+                ) : (
+                  <File size={14} style={{ color }} />
+                )}
+                <span className="text-[var(--color-text)] font-semibold">{node.name}</span>
+              </div>
+              <div className="text-[var(--color-text-secondary)] mt-1 text-xs">
+                {formatSize(node.size)} ({percentage.toFixed(1)}%)
+              </div>
+            </div>
           </button>
         );
       })}
       {otherSize > 0 && (
         <div
-          className="h-full bg-[var(--color-text-muted)] opacity-40"
+          className="h-full bg-[var(--color-text-muted)]/30 last:rounded-r-[var(--radius-lg)]"
           style={{ width: `${(otherSize / totalSize) * 100}%` }}
           title={`Other: ${formatSize(otherSize)}`}
         />
@@ -270,69 +304,71 @@ function FileNodeCard({ node, index, totalSize, onClick }: FileNodeCardProps) {
   return (
     <button
       className={`
-        category-card w-full text-left p-4
+        category-card w-full text-left p-5
         bg-[var(--color-bg-elevated)] hover:bg-[var(--color-bg-hover)]
-        border border-[var(--color-border)] hover:border-[var(--color-text-muted)]
-        rounded-[var(--radius-lg)]
-        transition-all duration-200
+        border border-[var(--color-border)] hover:border-[var(--color-text-muted)]/50
+        rounded-[var(--radius-xl)]
+        transition-all duration-300 ease-out
         group
+        hover:shadow-[var(--shadow-md)]
+        hover:translate-y-[-2px]
         ${node.isDir ? "cursor-pointer" : "cursor-default"}
       `}
-      style={{ animationDelay: `${index * 40}ms` }}
+      style={{ animationDelay: `${index * 50}ms` }}
       onClick={node.isDir ? onClick : undefined}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         {/* Icon */}
         <div
-          className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: `${color}20` }}
+          className="w-12 h-12 rounded-[var(--radius-lg)] flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
+          style={{ backgroundColor: `${color}25` }}
         >
           {node.isDir ? (
-            <Folder size={20} style={{ color }} />
+            <Folder size={24} style={{ color }} />
           ) : (
-            <File size={20} style={{ color }} />
+            <File size={24} style={{ color }} />
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-[var(--color-text)] truncate">
+            <h3 className="font-semibold text-[var(--color-text)] truncate text-base">
               {node.name}
             </h3>
             {node.isDir && (
               <ChevronRight
-                size={16}
-                className="text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] group-hover:translate-x-0.5 transition-all flex-shrink-0"
+                size={18}
+                className="text-[var(--color-text-muted)] group-hover:text-[var(--color-accent)] group-hover:translate-x-1 transition-all flex-shrink-0"
               />
             )}
           </div>
-          <p className="text-xs text-[var(--color-text-muted)] truncate mt-0.5">
+          <p className="text-sm text-[var(--color-text-muted)] truncate mt-0.5">
             {node.isDir ? "Folder" : "File"}
           </p>
         </div>
 
         {/* Size */}
         <div className="text-right flex-shrink-0">
-          <div className="font-mono text-sm font-semibold text-[var(--color-text)]">
+          <div className="font-mono text-base font-bold text-[var(--color-text)]">
             {formatSize(node.size)}
           </div>
           {percentage > 0.1 && (
-            <div className="text-xs text-[var(--color-text-muted)]">
+            <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
               {percentage.toFixed(1)}%
             </div>
           )}
         </div>
       </div>
 
-      {/* Mini progress bar */}
+      {/* Progress bar */}
       {node.size > 0 && (
-        <div className="mt-3 h-1 rounded-full bg-[var(--color-bg)] overflow-hidden">
+        <div className="mt-4 h-2 rounded-full bg-[var(--color-bg)] overflow-hidden">
           <div
-            className="h-full rounded-full transition-all duration-500"
+            className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
-              width: `${Math.max(percentage, 1)}%`,
-              backgroundColor: color,
+              width: `${Math.max(percentage, 2)}%`,
+              background: `linear-gradient(90deg, ${color}, ${color}cc)`,
             }}
           />
         </div>

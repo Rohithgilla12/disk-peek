@@ -23,7 +23,7 @@ export function StackedBar({
 
   if (totalSize === 0) {
     return (
-      <div className="h-12 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center">
+      <div className="h-8 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center">
         <span className="text-sm text-[var(--color-text-muted)]">
           No data to display
         </span>
@@ -32,9 +32,9 @@ export function StackedBar({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Main stacked bar */}
-      <div className="h-12 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] overflow-hidden flex">
+      <div className="h-8 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)]/50 overflow-hidden flex">
         {visibleCategories.map((category, index) => {
           const percentage = (category.size / totalSize) * 100;
           // Don't render segments smaller than 0.5%
@@ -47,13 +47,14 @@ export function StackedBar({
           return (
             <div
               key={category.id}
-              className="bar-segment relative group"
+              className="bar-segment relative group first:rounded-l-[var(--radius-md)] last:rounded-r-[var(--radius-md)]"
               style={{
                 width: `${percentage}%`,
-                backgroundColor: category.color,
+                background: `linear-gradient(180deg, ${category.color} 0%, ${category.color}dd 100%)`,
                 opacity: isOtherHighlighted ? 0.3 : 1,
-                transform: isHighlighted ? "scaleY(1.08)" : "scaleY(1)",
+                transform: isHighlighted ? "scaleY(1.15)" : "scaleY(1)",
                 animationDelay: `${index * 50}ms`,
+                zIndex: isHighlighted ? 10 : 1,
               }}
               onClick={() => onCategoryClick?.(category)}
               title={`${category.name}: ${formatSize(category.size)} (${percentage.toFixed(1)}%)`}
@@ -61,23 +62,23 @@ export function StackedBar({
               {/* Hover tooltip */}
               <div
                 className="
-                absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5
-                bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[var(--radius-sm)]
-                text-xs font-medium whitespace-nowrap
-                opacity-0 group-hover:opacity-100 pointer-events-none
-                transition-opacity duration-150
-                shadow-[var(--shadow-lg)]
-                z-10
-              "
+                  absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2
+                  bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[var(--radius-md)]
+                  text-xs font-medium whitespace-nowrap
+                  opacity-0 group-hover:opacity-100 pointer-events-none
+                  transition-all duration-200
+                  shadow-[var(--shadow-lg)]
+                  z-50
+                "
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className="w-2 h-2 rounded-full"
+                    className="w-2.5 h-2.5 rounded-sm"
                     style={{ backgroundColor: category.color }}
                   />
-                  <span>{category.name}</span>
+                  <span className="text-[var(--color-text)]">{category.name}</span>
                 </div>
-                <div className="text-[var(--color-text-secondary)] mt-0.5">
+                <div className="text-[var(--color-text-secondary)] mt-1">
                   {formatSize(category.size)} ({percentage.toFixed(1)}%)
                 </div>
               </div>
@@ -87,22 +88,36 @@ export function StackedBar({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-        {visibleCategories.slice(0, 8).map((category) => (
-          <button
-            key={category.id}
-            className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
-            onClick={() => onCategoryClick?.(category)}
-          >
-            <span
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: category.color }}
-            />
-            <span className="truncate max-w-[100px]">{category.name}</span>
-          </button>
-        ))}
+      <div className="flex flex-wrap gap-3">
+        {visibleCategories.slice(0, 8).map((category) => {
+          const isHighlighted = highlightedId === category.id;
+          const isOtherHighlighted =
+            highlightedId && highlightedId !== category.id;
+
+          return (
+            <button
+              key={category.id}
+              className={`
+                flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-full
+                transition-all duration-200
+                ${isHighlighted
+                  ? "bg-[var(--color-bg-hover)] text-[var(--color-text)]"
+                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-elevated)]"
+                }
+                ${isOtherHighlighted ? "opacity-40" : "opacity-100"}
+              `}
+              onClick={() => onCategoryClick?.(category)}
+            >
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: category.color }}
+              />
+              <span className="truncate max-w-[100px]">{category.name}</span>
+            </button>
+          );
+        })}
         {visibleCategories.length > 8 && (
-          <span className="text-xs text-[var(--color-text-muted)]">
+          <span className="text-xs text-[var(--color-text-muted)] px-2 py-1.5">
             +{visibleCategories.length - 8} more
           </span>
         )}

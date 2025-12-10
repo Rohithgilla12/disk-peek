@@ -1,4 +1,4 @@
-import { Monitor, Wrench } from "lucide-react";
+import { Monitor, Zap } from "lucide-react";
 
 export type ScanMode = "normal" | "dev";
 
@@ -10,40 +10,47 @@ interface ModeToggleProps {
 
 export function ModeToggle({ mode, onModeChange, disabled }: ModeToggleProps) {
   return (
-    <div className="inline-flex items-center p-1 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)]">
+    <div className="inline-flex items-center p-1.5 rounded-[var(--radius-xl)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] shadow-[var(--shadow-sm)]">
       <button
         onClick={() => onModeChange("normal")}
         disabled={disabled}
         className={`
-          flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] text-sm font-medium
-          transition-all duration-200
+          relative flex items-center gap-2.5 px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-semibold
+          transition-all duration-300 ease-out
           ${
             mode === "normal"
-              ? "bg-[var(--color-accent)] text-white shadow-[var(--shadow-md)]"
+              ? "bg-gradient-to-r from-[var(--color-accent)] to-[#5b9cf5] text-white shadow-[var(--shadow-sm)]"
               : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"
           }
           ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         `}
       >
-        <Monitor size={16} />
-        <span>Normal</span>
+        <Monitor size={17} strokeWidth={mode === "normal" ? 2.5 : 2} />
+        <span>Explorer</span>
+        {mode === "normal" && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-white shadow-sm" />
+        )}
       </button>
+
       <button
         onClick={() => onModeChange("dev")}
         disabled={disabled}
         className={`
-          flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] text-sm font-medium
-          transition-all duration-200
+          relative flex items-center gap-2.5 px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-semibold
+          transition-all duration-300 ease-out
           ${
             mode === "dev"
-              ? "bg-[var(--color-accent)] text-white shadow-[var(--shadow-md)]"
+              ? "bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-hover)] text-white shadow-[var(--shadow-sm)]"
               : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"
           }
           ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
         `}
       >
-        <Wrench size={16} />
-        <span>Dev Mode</span>
+        <Zap size={17} strokeWidth={mode === "dev" ? 2.5 : 2} />
+        <span>Dev Clean</span>
+        {mode === "dev" && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-white shadow-sm" />
+        )}
       </button>
     </div>
   );

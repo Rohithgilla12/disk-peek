@@ -3,6 +3,7 @@ package scanner
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"sync"
 	"syscall"
@@ -18,7 +19,7 @@ type NormalScanner struct {
 // NewNormalScanner creates a new NormalScanner with the specified number of workers
 func NewNormalScanner(workers int) *NormalScanner {
 	if workers <= 0 {
-		workers = 4
+		workers = runtime.NumCPU() * 2 // Use 2x CPU cores for I/O bound work
 	}
 	return &NormalScanner{
 		workers: workers,
@@ -137,8 +138,8 @@ func (s *NormalScanner) buildTree(rootPath string) *FileNode {
 				}
 
 				if entry.IsDir() {
-					// Calculate directory size
-					result := WalkDirectory(childPath)
+					// Calculate directory size using fast parallel walker
+					result := WalkDirectoryFast(childPath, 4)
 					node.Size = result.Size
 				} else {
 					// Use actual disk blocks for sparse file support
@@ -265,7 +266,8 @@ func (s *NormalScanner) GetDirectoryChildren(path string) ([]*FileNode, error) {
 				}
 
 				if entry.IsDir() {
-					result := WalkDirectory(childPath)
+					// Use fast parallel walker for subdirectories
+					result := WalkDirectoryFast(childPath, 4)
 					node.Size = result.Size
 				} else {
 					// Use actual disk blocks for sparse file support
