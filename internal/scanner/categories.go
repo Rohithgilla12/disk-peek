@@ -274,9 +274,11 @@ func GetCategoryByID(categories []Category, id string) *Category {
 // goModCache returns possible Go module cache paths using the default location and the GOPATH environment variable.
 func goModCache(home string) []string {
 	paths := []string{filepath.Join(home, "go/pkg/mod")} // default path
-	gopath := os.Getenv("GOPATH")
-	if gopath != "" {
-		paths = append(paths, filepath.Join(gopath, "pkg/mod"))
+	// GOPATH can contain multiple paths separated by os.PathListSeparator
+	for _, p := range filepath.SplitList(os.Getenv("GOPATH")) {
+		if p != "" {
+			paths = append(paths, filepath.Join(p, "pkg/mod"))
+		}
 	}
 	return paths
 }
