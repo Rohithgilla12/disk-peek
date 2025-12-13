@@ -178,3 +178,36 @@ export namespace scanner {
 
 }
 
+export namespace updater {
+
+	export class UpdateInfo {
+		currentVersion: string;
+		latestVersion: string;
+		updateAvailable: boolean;
+		releaseNotes: string;
+		releaseUrl: string;
+		downloadUrl: string;
+		assetName: string;
+		assetSize: number;
+		publishedAt: string;
+
+		static createFrom(source: any = {}) {
+			return new UpdateInfo(source);
+		}
+
+		constructor(source: any = {}) {
+			if ('string' === typeof source) source = JSON.parse(source);
+			this.currentVersion = source["currentVersion"];
+			this.latestVersion = source["latestVersion"];
+			this.updateAvailable = source["updateAvailable"];
+			this.releaseNotes = source["releaseNotes"];
+			this.releaseUrl = source["releaseUrl"];
+			this.downloadUrl = source["downloadUrl"];
+			this.assetName = source["assetName"];
+			this.assetSize = source["assetSize"];
+			this.publishedAt = source["publishedAt"];
+		}
+	}
+
+}
+

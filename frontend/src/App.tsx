@@ -7,25 +7,28 @@ import {
   CleanProgress,
   ScanResults,
   FileTreeResults,
+  UpdateNotification,
   type ScanMode,
 } from "@/components/disk-peek";
 import type { scanner } from "../wailsjs/go/models";
 import { useScan } from "@/hooks/useScan";
 import { useClean } from "@/hooks/useClean";
+import { useUpdate } from "@/hooks/useUpdate";
 import { RefreshCw, Clock, HardDrive, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function App() {
   const [mode, setMode] = useState<ScanMode>("dev");
   const { state: scanState, result, progress: scanProgress, error: scanError, scan, reset: resetScan } = useScan(mode);
-  const { 
-    state: cleanState, 
-    result: cleanResult, 
-    progress: cleanProgress, 
-    error: cleanError, 
-    clean, 
-    reset: resetClean 
+  const {
+    state: cleanState,
+    result: cleanResult,
+    progress: cleanProgress,
+    error: cleanError,
+    clean,
+    reset: resetClean
   } = useClean();
+  const update = useUpdate();
 
   // Combined state for UI
   const isScanning = scanState === "scanning";
@@ -167,10 +170,10 @@ function App() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
-              isCleaning 
-                ? "bg-[var(--color-danger)] animate-pulse" 
-                : isScanning 
-                  ? "bg-[var(--color-warning)] animate-pulse" 
+              isCleaning
+                ? "bg-[var(--color-danger)] animate-pulse"
+                : isScanning
+                  ? "bg-[var(--color-warning)] animate-pulse"
                   : isCleanCompleted
                     ? "bg-[var(--color-success)]"
                     : "bg-[var(--color-success)]"
@@ -188,11 +191,18 @@ function App() {
               }
             </span>
           </div>
-          <span className="text-xs text-[var(--color-text-muted)] font-mono bg-[var(--color-bg-elevated)] px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)]">
-            v0.1.0
-          </span>
+          <button
+            onClick={() => update.checkForUpdates()}
+            className="text-xs text-[var(--color-text-muted)] font-mono bg-[var(--color-bg-elevated)] px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] hover:border-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors cursor-pointer"
+            title="Click to check for updates"
+          >
+            v{update.currentVersion}
+          </button>
         </div>
       </footer>
+
+      {/* Update Notification */}
+      <UpdateNotification update={update} />
     </div>
   );
 }

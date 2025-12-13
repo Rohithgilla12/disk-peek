@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"disk-peek/internal/scanner"
+	"disk-peek/internal/updater"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -15,6 +16,7 @@ type App struct {
 	ctx           context.Context
 	devScanner    *scanner.DevScanner
 	normalScanner *scanner.NormalScanner
+	updater       *updater.Updater
 }
 
 // NewApp creates a new App application struct
@@ -22,6 +24,7 @@ func NewApp() *App {
 	return &App{
 		devScanner:    scanner.NewDevScanner(8),    // 8 concurrent workers
 		normalScanner: scanner.NewNormalScanner(8), // 8 concurrent workers
+		updater:       updater.NewUpdater(),
 	}
 }
 
@@ -308,4 +311,51 @@ func (a *App) CleanPaths(paths []string) (scanner.CleanResult, error) {
 
 	runtime.EventsEmit(a.ctx, "clean:completed", result)
 	return result, nil
+}
+
+// --- Update Methods ---
+
+// GetAppVersion returns the current application version
+func (a *App) GetAppVersion() string {
+	return a.updater.GetCurrentVersion()
+}
+
+// GetVersionInfo returns detailed version information
+func (a *App) GetVersionInfo() map[string]string {
+	return a.updater.GetVersionInfo()
+}
+
+// CheckForUpdates checks GitHub for available updates
+func (a *App) CheckForUpdates() (*updater.UpdateInfo, error) {
+	return a.updater.CheckForUpdates()
+}
+
+// DownloadUpdate downloads the update and returns the path to the DMG
+func (a *App) DownloadUpdate(downloadURL string) (string, error) {
+	var lastProgress updater.DownloadProgress
+
+	dmgPath, err := a.updater.DownloadUpdate(downloadURL, func(progress updater.DownloadProgress) {
+		// Only emit events every 1% to avoid flooding
+		if progress.Percent-lastProgress.Percent >= 1 || progress.Percent >= 100 {
+			runtime.EventsEmit(a.ctx, "update:download-progress", progress)
+			lastProgress = progress
+		}
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	runtime.EventsEmit(a.ctx, "update:download-complete", dmgPath)
+	return dmgPath, nil
+}
+
+// InstallUpdate opens the downloaded DMG for installation
+func (a *App) InstallUpdate(dmgPath string) error {
+	return a.updater.InstallUpdate(dmgPath)
+}
+
+// OpenReleasePage opens the GitHub release page in the browser
+func (a *App) OpenReleasePage(url string) error {
+	return a.updater.OpenReleasePage(url)
 }
