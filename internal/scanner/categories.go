@@ -167,7 +167,7 @@ func GetCategories() []Category {
 			Description: "Go module cache",
 			Icon:        "package",
 			Color:       "#00add8",
-			Paths:       []string{filepath.Join(home, "go/pkg/mod")},
+			Paths:       goModCache(home),
 		},
 		{
 			ID:          "gradle",
@@ -269,4 +269,16 @@ func GetCategoryByID(categories []Category, id string) *Category {
 		}
 	}
 	return nil
+}
+
+// goModCache returns possible Go module cache paths using the default location and the GOPATH environment variable.
+func goModCache(home string) []string {
+	paths := []string{filepath.Join(home, "go/pkg/mod")} // default path
+	// GOPATH can contain multiple paths separated by os.PathListSeparator
+	for _, p := range filepath.SplitList(os.Getenv("GOPATH")) {
+		if p != "" {
+			paths = append(paths, filepath.Join(p, "pkg/mod"))
+		}
+	}
+	return paths
 }

@@ -6,10 +6,6 @@ export function CleanCategories(arg1:Array<string>):Promise<scanner.CleanResult>
 
 export function CleanPaths(arg1:Array<string>):Promise<scanner.CleanResult>;
 
-export function DebugScanFolder(arg1:string):Promise<Record<string, any>>;
-
-export function ExportScanToJSON():Promise<string>;
-
 export function FormatSize(arg1:number):Promise<string>;
 
 export function GetCategoryItems(arg1:string):Promise<Array<scanner.FileNode>>;
