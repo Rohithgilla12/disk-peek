@@ -66,6 +66,18 @@ type CleanResult struct {
 	Errors       []string `json:"errors,omitempty"`
 }
 
+// CleanProgress reports cleaning progress to the frontend
+type CleanProgress struct {
+	Current      int    `json:"current"`
+	Total        int    `json:"total"`
+	CurrentPath  string `json:"currentPath"`
+	BytesFreed   int64  `json:"bytesFreed"`
+	CurrentItem  string `json:"currentItem"`
+}
+
+// CleanProgressCallback is called during cleaning to report progress
+type CleanProgressCallback func(CleanProgress)
+
 // WalkResult holds the scan result for a single path
 type WalkResult struct {
 	Path      string

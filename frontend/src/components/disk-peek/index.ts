@@ -5,5 +5,6 @@ export { CategoryIcon } from "./CategoryIcon";
 export { Breadcrumbs } from "./Breadcrumbs";
 export { EmptyState } from "./EmptyState";
 export { ScanProgress } from "./ScanProgress";
+export { CleanProgress } from "./CleanProgress";
 export { ScanResults } from "./ScanResults";
 export { FileTreeResults } from "./FileTreeResults";
