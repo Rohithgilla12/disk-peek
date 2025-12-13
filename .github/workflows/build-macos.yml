@@ -40,17 +40,29 @@ jobs:
           p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
           p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
 
-      - name: Install gon for signing and notarization
+      - name: Sign app bundle
+        env:
+          SIGNING_IDENTITY: "Developer ID Application: Rohith Gilla (7D2V3RM56T)"
         run: |
-          brew install Bearer/tap/gon
+          codesign --deep --force --verbose --sign "$SIGNING_IDENTITY" \
+            --options runtime \
+            --entitlements ./build/darwin/entitlements.plist \
+            ./build/bin/disk-peek.app
+          codesign --verify --verbose ./build/bin/disk-peek.app
 
-      - name: Sign and Notarize
+      - name: Notarize app bundle
         env:
           AC_USERNAME: ${{ secrets.AC_USERNAME }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
           AC_PROVIDER: ${{ secrets.AC_PROVIDER }}
         run: |
-          gon -log-level=info ./build/darwin/gon-sign.json
+          ditto -c -k --keepParent ./build/bin/disk-peek.app ./build/bin/disk-peek.zip
+          xcrun notarytool submit ./build/bin/disk-peek.zip \
+            --apple-id "$AC_USERNAME" \
+            --password "$AC_PASSWORD" \
+            --team-id "$AC_PROVIDER" \
+            --wait
+          xcrun stapler staple ./build/bin/disk-peek.app
 
       - name: Create DMG
         run: |
