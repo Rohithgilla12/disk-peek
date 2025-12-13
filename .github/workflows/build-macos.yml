@@ -9,6 +9,13 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - arch: universal
+            platform: darwin/universal
+          - arch: arm64
+            platform: darwin/arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,8 +38,8 @@ jobs:
           cd frontend
           npm install
 
-      - name: Build Wails app (Universal)
-        run: wails build -platform darwin/universal -clean
+      - name: Build Wails app (${{ matrix.arch }})
+        run: wails build -platform ${{ matrix.platform }} -clean
 
       - name: Import Code-Signing Certificates
         uses: Apple-Actions/import-codesign-certs@v3
@@ -76,21 +83,21 @@ jobs:
             --icon "disk-peek.app" 150 185 \
             --app-drop-link 450 185 \
             --no-internet-enable \
-            "build/bin/disk-peek-universal.dmg" \
+            "build/bin/disk-peek-${{ matrix.arch }}.dmg" \
             "build/bin/disk-peek.app"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: disk-peek-macos-universal
+          name: disk-peek-macos-${{ matrix.arch }}
           path: |
             build/bin/disk-peek.app
-            build/bin/disk-peek-universal.dmg
+            build/bin/disk-peek-${{ matrix.arch }}.dmg
 
       - name: Upload to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: build/bin/disk-peek-universal.dmg
+          files: build/bin/disk-peek-${{ matrix.arch }}.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
