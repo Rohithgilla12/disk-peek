@@ -1,0 +1,16 @@
+{
+  "source": ["./build/bin/disk-peek.app"],
+  "bundle_id": "dev.disk-peek.app",
+  "apple_id": {
+    "username": "@env:AC_USERNAME",
+    "password": "@env:AC_PASSWORD",
+    "provider": "@env:AC_PROVIDER"
+  },
+  "sign": {
+    "application_identity": "Developer ID Application: Rohith Gilla (7D2V3RM56T)",
+    "entitlements_file": "./build/darwin/entitlements.plist"
+  },
+  "zip": {
+    "output_path": "./build/bin/disk-peek.zip"
+  }
+}
