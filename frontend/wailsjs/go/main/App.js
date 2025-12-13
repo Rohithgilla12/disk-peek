@@ -10,14 +10,6 @@ export function CleanPaths(arg1) {
   return window['go']['main']['App']['CleanPaths'](arg1);
 }
 
-export function DebugScanFolder(arg1) {
-  return window['go']['main']['App']['DebugScanFolder'](arg1);
-}
-
-export function ExportScanToJSON() {
-  return window['go']['main']['App']['ExportScanToJSON']();
-}
-
 export function FormatSize(arg1) {
   return window['go']['main']['App']['FormatSize'](arg1);
 }
