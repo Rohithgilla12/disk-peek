@@ -116,28 +116,14 @@ func (a *App) FormatSize(bytes int64) string {
 	return scanner.FormatSize(bytes)
 }
 
-// --- Clean Methods ---
+// --- Delete/Clean Methods ---
 
-// CleanCategories cleans the specified category IDs with progress reporting
-func (a *App) CleanCategories(categoryIDs []string) scanner.CleanResult {
+// DeletePaths is the unified method for deleting files/directories
+// If permanent is true, uses os.RemoveAll for permanent deletion
+// If permanent is false, moves to system Trash
+// Emits progress events for batch operations
+func (a *App) DeletePaths(paths []string, permanent bool) scanner.CleanResult {
 	runtime.EventsEmit(a.ctx, "clean:started", nil)
-
-	// Get all categories and collect paths for the specified IDs
-	categories := scanner.GetCategories()
-	var pathsToClean []string
-	pathSizes := make(map[string]int64)
-
-	for _, id := range categoryIDs {
-		cat := scanner.GetCategoryByID(categories, id)
-		if cat == nil {
-			continue
-		}
-		// Collect all paths from this category and its children
-		collectPathsFromCategory(cat, &pathsToClean, pathSizes)
-	}
-
-	// Remove duplicates
-	pathsToClean = uniquePaths(pathsToClean)
 
 	result := scanner.CleanResult{
 		FreedBytes:   0,
@@ -145,8 +131,8 @@ func (a *App) CleanCategories(categoryIDs []string) scanner.CleanResult {
 		Errors:       []string{},
 	}
 
-	total := len(pathsToClean)
-	for i, path := range pathsToClean {
+	total := len(paths)
+	for i, path := range paths {
 		// Emit progress
 		progress := scanner.CleanProgress{
 			Current:     i + 1,
@@ -157,15 +143,22 @@ func (a *App) CleanCategories(categoryIDs []string) scanner.CleanResult {
 		}
 		runtime.EventsEmit(a.ctx, "clean:progress", progress)
 
-		// Get size before deletion
-		size := pathSizes[path]
-		if size == 0 {
-			walkResult := scanner.WalkDirectory(path)
-			size = walkResult.Size
+		// Check if path exists
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			continue // Skip non-existent paths
 		}
 
-		// Move to trash instead of permanent delete
-		err := moveToTrash(path)
+		// Get size before deletion
+		walkResult := scanner.WalkDirectory(path)
+		size := walkResult.Size
+
+		var err error
+		if permanent {
+			err = os.RemoveAll(path)
+		} else {
+			err = moveToTrash(path)
+		}
+
 		if err != nil {
 			result.Errors = append(result.Errors, err.Error())
 			continue
@@ -179,11 +172,37 @@ func (a *App) CleanCategories(categoryIDs []string) scanner.CleanResult {
 	return result
 }
 
+// DeletePath deletes a single path - convenience wrapper for DeletePaths
+func (a *App) DeletePath(path string, permanent bool) scanner.CleanResult {
+	return a.DeletePaths([]string{path}, permanent)
+}
+
+// CleanCategories cleans the specified category IDs (always moves to trash)
+func (a *App) CleanCategories(categoryIDs []string) scanner.CleanResult {
+	// Get all categories and collect paths for the specified IDs
+	categories := scanner.GetCategories()
+	var pathsToClean []string
+
+	for _, id := range categoryIDs {
+		cat := scanner.GetCategoryByID(categories, id)
+		if cat == nil {
+			continue
+		}
+		// Collect all paths from this category and its children
+		collectPathsFromCategory(cat, &pathsToClean, nil)
+	}
+
+	// Remove duplicates and delete (move to trash)
+	return a.DeletePaths(uniquePaths(pathsToClean), false)
+}
+
 // collectPathsFromCategory recursively collects all paths from a category
 func collectPathsFromCategory(cat *scanner.Category, paths *[]string, sizes map[string]int64) {
 	for _, path := range cat.Paths {
 		*paths = append(*paths, path)
-		sizes[path] = cat.Size
+		if sizes != nil {
+			sizes[path] = cat.Size
+		}
 	}
 	for i := range cat.Children {
 		collectPathsFromCategory(&cat.Children[i], paths, sizes)
@@ -258,7 +277,7 @@ func moveToTrash(path string) error {
 
 	// Use macOS trash command via osascript for proper Trash behavior
 	// This preserves the "Put Back" functionality
-	cmd := exec.Command("osascript", "-e", 
+	cmd := exec.Command("osascript", "-e",
 		`tell application "Finder" to delete POSIX file "`+path+`"`)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -267,45 +286,4 @@ func moveToTrash(path string) error {
 	}
 	_ = output
 	return nil
-}
-
-// CleanPaths deletes the specified paths (moves to Trash) - legacy method
-func (a *App) CleanPaths(paths []string) (scanner.CleanResult, error) {
-	runtime.EventsEmit(a.ctx, "clean:started", nil)
-
-	result := scanner.CleanResult{
-		FreedBytes:   0,
-		DeletedPaths: []string{},
-		Errors:       []string{},
-	}
-
-	total := len(paths)
-	for i, path := range paths {
-		// Emit progress
-		progress := scanner.CleanProgress{
-			Current:     i + 1,
-			Total:       total,
-			CurrentPath: path,
-			BytesFreed:  result.FreedBytes,
-			CurrentItem: truncatePath(path),
-		}
-		runtime.EventsEmit(a.ctx, "clean:progress", progress)
-
-		// Get size before deletion
-		walkResult := scanner.WalkDirectory(path)
-		size := walkResult.Size
-
-		// Move to trash
-		err := moveToTrash(path)
-		if err != nil {
-			result.Errors = append(result.Errors, err.Error())
-			continue
-		}
-
-		result.FreedBytes += size
-		result.DeletedPaths = append(result.DeletedPaths, path)
-	}
-
-	runtime.EventsEmit(a.ctx, "clean:completed", result)
-	return result, nil
 }

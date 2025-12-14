@@ -8,3 +8,4 @@ export { ScanProgress } from "./ScanProgress";
 export { CleanProgress } from "./CleanProgress";
 export { ScanResults } from "./ScanResults";
 export { FileTreeResults } from "./FileTreeResults";
+export { DeleteConfirmDialog } from "./DeleteConfirmDialog";

@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { Breadcrumbs } from "./Breadcrumbs";
-import { ArrowLeft, Folder, File, ChevronRight, FolderOpen, Loader2 } from "lucide-react";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import { ArrowLeft, Folder, File, ChevronRight, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GetDirectoryChildren } from "../../../wailsjs/go/main/App";
+import { GetDirectoryChildren, DeletePath } from "../../../wailsjs/go/main/App";
 
 interface BreadcrumbItem {
   id: string;
@@ -47,6 +48,11 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [nodeToDelete, setNodeToDelete] = useState<scanner.FileNode | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const currentLevel = navigationStack[navigationStack.length - 1];
 
@@ -103,6 +109,71 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
       await handleBreadcrumbNavigate(parentIndex);
     }
   }, [navigationStack, handleBreadcrumbNavigate]);
+
+  // Open delete confirmation dialog
+  const handleDeleteClick = useCallback((node: scanner.FileNode, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering folder navigation
+    setNodeToDelete(node);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  // Refresh current directory after deletion
+  const refreshCurrentDirectory = useCallback(async () => {
+    if (navigationStack.length === 1) {
+      // At root - we need to filter out the deleted item from current children
+      // Since we can't re-scan from here, just filter local state
+      if (nodeToDelete) {
+        setCurrentChildren(prev => prev.filter(n => n.path !== nodeToDelete.path));
+      }
+    } else {
+      // In a subdirectory - reload from backend
+      const currentPath = currentLevel.path;
+      try {
+        const children = await GetDirectoryChildren(currentPath);
+        setCurrentChildren(children || []);
+      } catch (error) {
+        console.error("Failed to refresh directory:", error);
+      }
+    }
+  }, [navigationStack.length, currentLevel.path, nodeToDelete]);
+
+  // Handle trash deletion
+  const handleTrash = useCallback(async () => {
+    if (!nodeToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const result = await DeletePath(nodeToDelete.path, false);
+      if (result.deletedPaths.length > 0) {
+        await refreshCurrentDirectory();
+      }
+    } catch (error) {
+      console.error("Failed to move to trash:", error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setNodeToDelete(null);
+    }
+  }, [nodeToDelete, refreshCurrentDirectory]);
+
+  // Handle permanent deletion
+  const handlePermanentDelete = useCallback(async () => {
+    if (!nodeToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const result = await DeletePath(nodeToDelete.path, true);
+      if (result.deletedPaths.length > 0) {
+        await refreshCurrentDirectory();
+      }
+    } catch (error) {
+      console.error("Failed to delete permanently:", error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setNodeToDelete(null);
+    }
+  }, [nodeToDelete, refreshCurrentDirectory]);
 
   const breadcrumbItems = navigationStack.map((item) => ({
     id: item.id,
@@ -187,12 +258,28 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
                   index={index}
                   totalSize={currentTotalSize}
                   onClick={() => handleNodeClick(node)}
+                  onDelete={(e) => handleDeleteClick(node, e)}
                 />
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      {nodeToDelete && (
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          itemName={nodeToDelete.name}
+          itemPath={nodeToDelete.path}
+          itemSize={nodeToDelete.size}
+          isDirectory={nodeToDelete.isDir}
+          onTrash={handleTrash}
+          onPermanentDelete={handlePermanentDelete}
+          isDeleting={isDeleting}
+        />
+      )}
     </div>
   );
 }
@@ -295,14 +382,15 @@ interface FileNodeCardProps {
   index: number;
   totalSize: number;
   onClick?: () => void;
+  onDelete?: (e: React.MouseEvent) => void;
 }
 
-function FileNodeCard({ node, index, totalSize, onClick }: FileNodeCardProps) {
+function FileNodeCard({ node, index, totalSize, onClick, onDelete }: FileNodeCardProps) {
   const percentage = totalSize > 0 ? (node.size / totalSize) * 100 : 0;
   const color = getColorForPercentage(percentage);
 
   return (
-    <button
+    <div
       className={`
         category-card w-full text-left p-5
         bg-[var(--color-bg-elevated)] hover:bg-[var(--color-bg-hover)]
@@ -348,16 +436,30 @@ function FileNodeCard({ node, index, totalSize, onClick }: FileNodeCardProps) {
           </p>
         </div>
 
-        {/* Size */}
-        <div className="text-right flex-shrink-0">
-          <div className="font-mono text-base font-bold text-[var(--color-text)]">
-            {formatSize(node.size)}
-          </div>
-          {percentage > 0.1 && (
-            <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              {percentage.toFixed(1)}%
-            </div>
+        {/* Size and Delete button */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Delete button - shows on hover */}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="opacity-0 group-hover:opacity-100 p-2 rounded-[var(--radius-md)] bg-[var(--color-danger)]/10 hover:bg-[var(--color-danger)]/20 text-[var(--color-danger)] transition-all duration-200 hover:scale-110"
+              title={`Delete ${node.name}`}
+            >
+              <Trash2 size={16} />
+            </button>
           )}
+          
+          {/* Size */}
+          <div className="text-right">
+            <div className="font-mono text-base font-bold text-[var(--color-text)]">
+              {formatSize(node.size)}
+            </div>
+            {percentage > 0.1 && (
+              <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                {percentage.toFixed(1)}%
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -373,7 +475,7 @@ function FileNodeCard({ node, index, totalSize, onClick }: FileNodeCardProps) {
           />
         </div>
       )}
-    </button>
+    </div>
   );
 }
 

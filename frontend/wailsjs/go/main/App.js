@@ -6,8 +6,12 @@ export function CleanCategories(arg1) {
   return window['go']['main']['App']['CleanCategories'](arg1);
 }
 
-export function CleanPaths(arg1) {
-  return window['go']['main']['App']['CleanPaths'](arg1);
+export function DeletePath(arg1, arg2) {
+  return window['go']['main']['App']['DeletePath'](arg1, arg2);
+}
+
+export function DeletePaths(arg1, arg2) {
+  return window['go']['main']['App']['DeletePaths'](arg1, arg2);
 }
 
 export function FormatSize(arg1) {
