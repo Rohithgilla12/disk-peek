@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2, AlertTriangle, Folder, File } from "lucide-react";
+import { formatSize } from "@/lib/formatters";
 
 interface DeleteConfirmDialogProps {
   open: boolean;
@@ -19,6 +20,7 @@ interface DeleteConfirmDialogProps {
   onTrash: () => void;
   onPermanentDelete: () => void;
   isDeleting?: boolean;
+  error?: string | null;
 }
 
 export function DeleteConfirmDialog({
@@ -31,6 +33,7 @@ export function DeleteConfirmDialog({
   onTrash,
   onPermanentDelete,
   isDeleting = false,
+  error = null,
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -70,6 +73,15 @@ export function DeleteConfirmDialog({
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {error && (
+          <div className="p-3 bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30 rounded-[var(--radius-lg)] mb-2">
+            <p className="text-sm text-[var(--color-danger)] font-medium">
+              {error}
+            </p>
+          </div>
+        )}
+
         <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
           {/* Move to Trash - Primary/Default action */}
           <Button
@@ -105,13 +117,3 @@ export function DeleteConfirmDialog({
     </AlertDialog>
   );
 }
-
-function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const value = bytes / Math.pow(k, i);
-  return `${value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1) : value.toFixed(2)} ${sizes[i]}`;
-}
-

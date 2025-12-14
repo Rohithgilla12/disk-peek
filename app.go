@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"strings"
 
 	"disk-peek/internal/scanner"
 
@@ -275,10 +276,14 @@ func moveToTrash(path string) error {
 		return nil // Already doesn't exist, consider it success
 	}
 
+	// Escape backslashes and double quotes for AppleScript string
+	escapedPath := strings.ReplaceAll(path, `\`, `\\`)
+	escapedPath = strings.ReplaceAll(escapedPath, `"`, `\"`)
+
 	// Use macOS trash command via osascript for proper Trash behavior
 	// This preserves the "Put Back" functionality
 	cmd := exec.Command("osascript", "-e",
-		`tell application "Finder" to delete POSIX file "`+path+`"`)
+		`tell application "Finder" to delete POSIX file "`+escapedPath+`"`)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Fallback: try direct removal if Finder fails

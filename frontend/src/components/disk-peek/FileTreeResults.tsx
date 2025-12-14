@@ -5,6 +5,7 @@ import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { ArrowLeft, Folder, File, ChevronRight, FolderOpen, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GetDirectoryChildren, DeletePath } from "../../../wailsjs/go/main/App";
+import { formatSize } from "@/lib/formatters";
 
 interface BreadcrumbItem {
   id: string;
@@ -53,6 +54,7 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [nodeToDelete, setNodeToDelete] = useState<scanner.FileNode | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const currentLevel = navigationStack[navigationStack.length - 1];
 
@@ -114,6 +116,7 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
   const handleDeleteClick = useCallback((node: scanner.FileNode, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering folder navigation
     setNodeToDelete(node);
+    setDeleteError(null);
     setDeleteDialogOpen(true);
   }, []);
 
@@ -140,38 +143,46 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
   // Handle trash deletion
   const handleTrash = useCallback(async () => {
     if (!nodeToDelete) return;
-    
+
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       const result = await DeletePath(nodeToDelete.path, false);
       if (result.deletedPaths.length > 0) {
         await refreshCurrentDirectory();
+        setDeleteDialogOpen(false);
+        setNodeToDelete(null);
+      } else if (result.errors && result.errors.length > 0) {
+        setDeleteError(result.errors[0]);
       }
     } catch (error) {
       console.error("Failed to move to trash:", error);
+      setDeleteError(`Failed to move "${nodeToDelete.name}" to trash`);
     } finally {
       setIsDeleting(false);
-      setDeleteDialogOpen(false);
-      setNodeToDelete(null);
     }
   }, [nodeToDelete, refreshCurrentDirectory]);
 
   // Handle permanent deletion
   const handlePermanentDelete = useCallback(async () => {
     if (!nodeToDelete) return;
-    
+
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       const result = await DeletePath(nodeToDelete.path, true);
       if (result.deletedPaths.length > 0) {
         await refreshCurrentDirectory();
+        setDeleteDialogOpen(false);
+        setNodeToDelete(null);
+      } else if (result.errors && result.errors.length > 0) {
+        setDeleteError(result.errors[0]);
       }
     } catch (error) {
       console.error("Failed to delete permanently:", error);
+      setDeleteError(`Failed to permanently delete "${nodeToDelete.name}"`);
     } finally {
       setIsDeleting(false);
-      setDeleteDialogOpen(false);
-      setNodeToDelete(null);
     }
   }, [nodeToDelete, refreshCurrentDirectory]);
 
@@ -278,6 +289,7 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
           onTrash={handleTrash}
           onPermanentDelete={handlePermanentDelete}
           isDeleting={isDeleting}
+          error={deleteError}
         />
       )}
     </div>
@@ -477,13 +489,4 @@ function FileNodeCard({ node, index, totalSize, onClick, onDelete }: FileNodeCar
       )}
     </div>
   );
-}
-
-function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const value = bytes / Math.pow(k, i);
-  return `${value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1) : value.toFixed(2)} ${sizes[i]}`;
 }
