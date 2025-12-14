@@ -4,7 +4,9 @@ import {scanner} from '../models';
 
 export function CleanCategories(arg1:Array<string>):Promise<scanner.CleanResult>;
 
-export function CleanPaths(arg1:Array<string>):Promise<scanner.CleanResult>;
+export function DeletePath(arg1:string,arg2:boolean):Promise<scanner.CleanResult>;
+
+export function DeletePaths(arg1:Array<string>,arg2:boolean):Promise<scanner.CleanResult>;
 
 export function FormatSize(arg1:number):Promise<string>;
 
