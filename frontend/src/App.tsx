@@ -7,12 +7,13 @@ import {
   CleanProgress,
   ScanResults,
   FileTreeResults,
+  CleanCompletedDialog,
   type ScanMode,
 } from "@/components/disk-peek";
 import type { scanner } from "../wailsjs/go/models";
 import { useScan } from "@/hooks/useScan";
 import { useClean } from "@/hooks/useClean";
-import { RefreshCw, Clock, HardDrive, Sparkles, CheckCircle2 } from "lucide-react";
+import { RefreshCw, Clock, HardDrive, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function App() {
@@ -44,9 +45,14 @@ function App() {
     await clean(categoryIds);
   };
 
-  const handleCleanDone = () => {
+  // Go back to the scan results without rescanning
+  const handleCleanGoBack = () => {
     resetClean();
-    // Trigger a new scan to show updated sizes
+  };
+
+  // Rescan to show updated sizes
+  const handleCleanScanAgain = () => {
+    resetClean();
     scan();
   };
 
@@ -146,19 +152,22 @@ function App() {
           />
         )}
 
-        {isCleanCompleted && cleanResult && (
-          <CleanCompletedState 
-            result={cleanResult} 
-            onDone={handleCleanDone} 
-          />
-        )}
-
-        {scanState === "completed" && result && !isCleaning && !isCleanCompleted && (
+        {scanState === "completed" && result && !isCleaning && (
           mode === "dev" ? (
             <ScanResults result={result as scanner.ScanResult} onClean={handleClean} />
           ) : (
             <FileTreeResults result={result as scanner.FullScanResult} />
           )
+        )}
+
+        {/* Clean completed dialog - shows over the scan results */}
+        {isCleanCompleted && cleanResult && (
+          <CleanCompletedDialog
+            open={isCleanCompleted}
+            result={cleanResult}
+            onGoBack={handleCleanGoBack}
+            onScanAgain={handleCleanScanAgain}
+          />
         )}
       </main>
 
@@ -205,96 +214,6 @@ function formatDuration(nanoseconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
-}
-
-function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const value = bytes / Math.pow(k, i);
-  return `${value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1) : value.toFixed(2)} ${sizes[i]}`;
-}
-
-interface CleanCompletedStateProps {
-  result: scanner.CleanResult;
-  onDone: () => void;
-}
-
-function CleanCompletedState({ result, onDone }: CleanCompletedStateProps) {
-  const hasErrors = result.errors && result.errors.length > 0;
-
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center py-16 px-8">
-      {/* Success icon */}
-      <div className="relative mb-8">
-        <div className="w-24 h-24 rounded-full bg-[var(--color-success)]/10 border-2 border-[var(--color-success)]/30 flex items-center justify-center">
-          <CheckCircle2 size={48} className="text-[var(--color-success)]" />
-        </div>
-        {/* Sparkle decorations */}
-        <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--color-warning)] flex items-center justify-center">
-          <Sparkles size={14} className="text-white" />
-        </div>
-      </div>
-
-      {/* Success message */}
-      <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
-        Cleaning Complete!
-      </h2>
-      <p className="text-[var(--color-text-secondary)] mb-6">
-        Your disk space has been freed up successfully
-      </p>
-
-      {/* Stats */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="flex flex-col items-center px-6 py-4 bg-[var(--color-bg-elevated)] rounded-[var(--radius-lg)] border border-[var(--color-border)]">
-          <span className="text-3xl font-bold text-[var(--color-success)] font-mono size-reveal">
-            {formatSize(result.freedBytes)}
-          </span>
-          <span className="text-xs text-[var(--color-text-muted)] mt-1">Space Freed</span>
-        </div>
-        <div className="flex flex-col items-center px-6 py-4 bg-[var(--color-bg-elevated)] rounded-[var(--radius-lg)] border border-[var(--color-border)]">
-          <span className="text-3xl font-bold text-[var(--color-text)] font-mono">
-            {result.deletedPaths.length}
-          </span>
-          <span className="text-xs text-[var(--color-text-muted)] mt-1">Items Cleaned</span>
-        </div>
-      </div>
-
-      {/* Errors if any */}
-      {hasErrors && result.errors && (
-        <div className="w-full max-w-md mb-6 p-4 bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 rounded-[var(--radius-lg)]">
-          <p className="text-sm text-[var(--color-warning)] font-medium mb-2">
-            Some items couldn't be cleaned:
-          </p>
-          <ul className="text-xs text-[var(--color-text-muted)] space-y-1">
-            {result.errors.slice(0, 3).map((err, i) => (
-              <li key={i} className="truncate">• {err}</li>
-            ))}
-            {result.errors.length > 3 && (
-              <li className="text-[var(--color-text-muted)]">
-                ...and {result.errors.length - 3} more
-              </li>
-            )}
-          </ul>
-        </div>
-      )}
-
-      {/* Action button */}
-      <Button
-        size="lg"
-        onClick={onDone}
-        className="px-8 bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-hover)] hover:from-[var(--color-accent-hover)] hover:to-[var(--color-accent)] text-white font-semibold rounded-[var(--radius-xl)] shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-glow)] transition-all duration-300"
-      >
-        <RefreshCw size={18} className="mr-2" />
-        Scan Again
-      </Button>
-
-      <p className="text-xs text-[var(--color-text-muted)] mt-4">
-        Items were moved to Trash — you can restore them if needed
-      </p>
-    </div>
-  );
 }
 
 export default App;

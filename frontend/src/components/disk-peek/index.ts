@@ -9,3 +9,4 @@ export { CleanProgress } from "./CleanProgress";
 export { ScanResults } from "./ScanResults";
 export { FileTreeResults } from "./FileTreeResults";
 export { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+export { CleanCompletedDialog } from "./CleanCompletedDialog";
