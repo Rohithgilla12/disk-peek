@@ -29,8 +29,8 @@ export function CleanCompletedDialog({
 
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent className="max-w-md">
-        <AlertDialogHeader>
+      <AlertDialogContent className="max-w-md overflow-hidden">
+        <AlertDialogHeader className="overflow-hidden">
           {/* Success icon */}
           <div className="flex justify-center mb-4">
             <div className="relative">
@@ -54,17 +54,17 @@ export function CleanCompletedDialog({
 
         {/* Stats */}
         <div className="flex items-center justify-center gap-4 my-4">
-          <div className="flex flex-col items-center px-5 py-3 bg-[var(--color-bg)] rounded-[var(--radius-lg)] border border-[var(--color-border)]">
-            <span className="text-2xl font-bold text-[var(--color-success)] font-mono">
+          <div className="flex flex-col items-center px-5 py-3 bg-[var(--color-bg)] rounded-[var(--radius-lg)] border border-[var(--color-border)] min-w-0">
+            <span className="text-2xl font-bold text-[var(--color-success)] font-mono whitespace-nowrap">
               {formatSize(result.freedBytes)}
             </span>
             <span className="text-xs text-[var(--color-text-muted)] mt-1">Space Freed</span>
           </div>
-          <div className="flex flex-col items-center px-5 py-3 bg-[var(--color-bg)] rounded-[var(--radius-lg)] border border-[var(--color-border)]">
+          <div className="flex flex-col items-center px-5 py-3 bg-[var(--color-bg)] rounded-[var(--radius-lg)] border border-[var(--color-border)] min-w-0">
             <span className="text-2xl font-bold text-[var(--color-text)] font-mono">
               {result.deletedPaths.length}
             </span>
-            <span className="text-xs text-[var(--color-text-muted)] mt-1">
+            <span className="text-xs text-[var(--color-text-muted)] mt-1 whitespace-nowrap">
               {result.deletedPaths.length === 1 ? "Item" : "Items"} Cleaned
             </span>
           </div>
@@ -72,11 +72,11 @@ export function CleanCompletedDialog({
 
         {/* Errors if any */}
         {hasErrors && result.errors && (
-          <div className="p-3 bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 rounded-[var(--radius-lg)] mb-4">
+          <div className="p-3 bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 rounded-[var(--radius-lg)] mb-4 overflow-hidden">
             <p className="text-sm text-[var(--color-warning)] font-medium mb-1">
               Some items couldn't be cleaned:
             </p>
-            <ul className="text-xs text-[var(--color-text-muted)] space-y-0.5">
+            <ul className="text-xs text-[var(--color-text-muted)] space-y-0.5 overflow-hidden">
               {result.errors.slice(0, 3).map((err, i) => (
                 <li key={i} className="truncate">• {err}</li>
               ))}
