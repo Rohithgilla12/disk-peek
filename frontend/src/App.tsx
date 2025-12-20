@@ -8,24 +8,27 @@ import {
   ScanResults,
   FileTreeResults,
   CleanCompletedDialog,
+  SettingsPanel,
   type ScanMode,
 } from "@/components/disk-peek";
 import type { scanner } from "../wailsjs/go/models";
 import { useScan } from "@/hooks/useScan";
 import { useClean } from "@/hooks/useClean";
-import { RefreshCw, Clock, HardDrive, Sparkles } from "lucide-react";
+import { RefreshCw, Clock, HardDrive, Sparkles, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function App() {
   const [mode, setMode] = useState<ScanMode>("dev");
-  const { state: scanState, result, progress: scanProgress, error: scanError, scan, reset: resetScan } = useScan(mode);
-  const { 
-    state: cleanState, 
-    result: cleanResult, 
-    progress: cleanProgress, 
-    error: cleanError, 
-    clean, 
-    reset: resetClean 
+  const [showSettings, setShowSettings] = useState(false);
+  const { state: scanState, result, progress: scanProgress, error: scanError, scan, cancel: cancelScan, reset: resetScan } = useScan(mode);
+  const {
+    state: cleanState,
+    result: cleanResult,
+    progress: cleanProgress,
+    error: cleanError,
+    clean,
+    cancel: cancelClean,
+    reset: resetClean
   } = useClean();
 
   // Combined state for UI
@@ -90,7 +93,7 @@ function App() {
           />
 
           {/* Actions */}
-          <div className="flex items-center gap-3 min-w-[160px] justify-end">
+          <div className="flex items-center gap-3 min-w-[200px] justify-end">
             {scanState === "completed" && !isCleaning && !isCleanCompleted && (
               <>
                 <Button
@@ -110,6 +113,16 @@ function App() {
                 )}
               </>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowSettings(true)}
+              disabled={isBusy}
+              className="w-9 h-9 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)]"
+              title="Settings"
+            >
+              <Settings size={18} className="text-[var(--color-text-muted)]" />
+            </Button>
           </div>
         </div>
       </header>
@@ -139,6 +152,7 @@ function App() {
             total={scanProgress.total}
             currentPath={scanProgress.currentPath}
             bytesScanned={scanProgress.bytesScanned}
+            onCancel={cancelScan}
           />
         )}
 
@@ -149,6 +163,7 @@ function App() {
             currentPath={cleanProgress.currentPath}
             bytesFreed={cleanProgress.bytesFreed}
             currentItem={cleanProgress.currentItem}
+            onCancel={cancelClean}
           />
         )}
 
@@ -202,6 +217,9 @@ function App() {
           </span>
         </div>
       </footer>
+
+      {/* Settings Panel */}
+      <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

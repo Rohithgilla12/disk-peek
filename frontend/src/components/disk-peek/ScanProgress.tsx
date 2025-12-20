@@ -1,10 +1,12 @@
-import { Loader2, Folder, HardDrive } from "lucide-react";
+import { Loader2, Folder, HardDrive, X } from "lucide-react";
+import { Button } from "../ui/button";
 
 interface ScanProgressProps {
   current: number;
   total: number;
   currentPath?: string;
   bytesScanned: number;
+  onCancel?: () => void;
 }
 
 const scanningMessages = [
@@ -20,6 +22,7 @@ export function ScanProgress({
   total,
   currentPath,
   bytesScanned,
+  onCancel,
 }: ScanProgressProps) {
   // Handle indeterminate state when total is 0
   const isIndeterminate = total === 0;
@@ -144,6 +147,19 @@ export function ScanProgress({
             {truncatePath(currentPath)}
           </p>
         </div>
+      )}
+
+      {/* Cancel button */}
+      {onCancel && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          className="mt-6 gap-2"
+        >
+          <X size={14} />
+          Cancel Scan
+        </Button>
       )}
     </div>
   );

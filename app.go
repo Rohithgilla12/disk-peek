@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"disk-peek/internal/scanner"
+	"disk-peek/internal/settings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -16,6 +17,8 @@ type App struct {
 	ctx           context.Context
 	devScanner    *scanner.DevScanner
 	normalScanner *scanner.NormalScanner
+	scanCancel    context.CancelFunc
+	cleanCancel   context.CancelFunc
 }
 
 // NewApp creates a new App application struct
@@ -31,19 +34,54 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+// CancelScan cancels any running scan operation
+func (a *App) CancelScan() {
+	if a.scanCancel != nil {
+		a.scanCancel()
+		a.scanCancel = nil
+	}
+	a.devScanner.Cancel()
+	a.normalScanner.Cancel()
+	runtime.EventsEmit(a.ctx, "scan:cancelled", nil)
+}
+
+// CancelClean cancels any running clean operation
+func (a *App) CancelClean() {
+	if a.cleanCancel != nil {
+		a.cleanCancel()
+		a.cleanCancel = nil
+	}
+	runtime.EventsEmit(a.ctx, "clean:cancelled", nil)
+}
+
 // --- Dev Mode Methods ---
 
 // ScanDev performs a full Dev Mode scan of all categories
 func (a *App) ScanDev() scanner.ScanResult {
-	// Set up progress callback to emit events
+	// Cancel any existing scan
+	if a.scanCancel != nil {
+		a.scanCancel()
+	}
+
+	// Create new context for this scan
+	ctx, cancel := context.WithCancel(context.Background())
+	a.scanCancel = cancel
+
+	// Set up context and progress callback
+	a.devScanner.SetContext(ctx)
 	a.devScanner.SetProgressCallback(func(progress scanner.ScanProgress) {
 		runtime.EventsEmit(a.ctx, "scan:progress", progress)
 	})
 
 	runtime.EventsEmit(a.ctx, "scan:started", nil)
 	result := a.devScanner.Scan()
-	runtime.EventsEmit(a.ctx, "scan:completed", result)
 
+	// Check if cancelled
+	if a.devScanner.IsCancelled() {
+		return result
+	}
+
+	runtime.EventsEmit(a.ctx, "scan:completed", result)
 	return result
 }
 
@@ -74,26 +112,58 @@ func (a *App) GetCategoryItems(categoryID string) ([]scanner.FileNode, error) {
 
 // ScanNormal performs a full Normal Mode scan starting from home directory
 func (a *App) ScanNormal() scanner.FullScanResult {
-	// Set up progress callback to emit events
+	// Cancel any existing scan
+	if a.scanCancel != nil {
+		a.scanCancel()
+	}
+
+	// Create new context for this scan
+	ctx, cancel := context.WithCancel(context.Background())
+	a.scanCancel = cancel
+
+	// Set up context and progress callback
+	a.normalScanner.SetContext(ctx)
 	a.normalScanner.SetProgressCallback(func(progress scanner.ScanProgress) {
 		runtime.EventsEmit(a.ctx, "scan:progress", progress)
 	})
 
 	runtime.EventsEmit(a.ctx, "scan:started", nil)
 	result := a.normalScanner.Scan()
-	runtime.EventsEmit(a.ctx, "scan:completed:normal", result)
 
+	// Check if cancelled
+	if a.normalScanner.IsCancelled() {
+		return result
+	}
+
+	runtime.EventsEmit(a.ctx, "scan:completed:normal", result)
 	return result
 }
 
 // ScanNormalPath performs a Normal Mode scan starting from a specific path
 func (a *App) ScanNormalPath(path string) scanner.FullScanResult {
+	// Cancel any existing scan
+	if a.scanCancel != nil {
+		a.scanCancel()
+	}
+
+	// Create new context for this scan
+	ctx, cancel := context.WithCancel(context.Background())
+	a.scanCancel = cancel
+
+	// Set up context and progress callback
+	a.normalScanner.SetContext(ctx)
 	a.normalScanner.SetProgressCallback(func(progress scanner.ScanProgress) {
 		runtime.EventsEmit(a.ctx, "scan:progress", progress)
 	})
 
 	runtime.EventsEmit(a.ctx, "scan:started", nil)
 	result := a.normalScanner.ScanPath(path)
+
+	// Check if cancelled
+	if a.normalScanner.IsCancelled() {
+		return result
+	}
+
 	runtime.EventsEmit(a.ctx, "scan:completed:normal", result)
 
 	return result
@@ -127,9 +197,10 @@ func (a *App) DeletePaths(paths []string, permanent bool) scanner.CleanResult {
 	runtime.EventsEmit(a.ctx, "clean:started", nil)
 
 	result := scanner.CleanResult{
-		FreedBytes:   0,
-		DeletedPaths: []string{},
-		Errors:       []string{},
+		FreedBytes:     0,
+		DeletedPaths:   []string{},
+		Errors:         []string{},
+		DetailedErrors: []scanner.CleanError{},
 	}
 
 	total := len(paths)
@@ -161,7 +232,14 @@ func (a *App) DeletePaths(paths []string, permanent bool) scanner.CleanResult {
 		}
 
 		if err != nil {
-			result.Errors = append(result.Errors, err.Error())
+			errorCode := getErrorCode(err)
+			errorMsg := getErrorMessage(err, path)
+			result.Errors = append(result.Errors, errorMsg)
+			result.DetailedErrors = append(result.DetailedErrors, scanner.CleanError{
+				Path:    path,
+				Message: errorMsg,
+				Code:    errorCode,
+			})
 			continue
 		}
 
@@ -173,18 +251,49 @@ func (a *App) DeletePaths(paths []string, permanent bool) scanner.CleanResult {
 	return result
 }
 
+// getErrorCode returns a code for the error type
+func getErrorCode(err error) string {
+	if os.IsPermission(err) {
+		return "PERMISSION_DENIED"
+	}
+	if os.IsNotExist(err) {
+		return "NOT_FOUND"
+	}
+	if os.IsExist(err) {
+		return "ALREADY_EXISTS"
+	}
+	return "UNKNOWN"
+}
+
+// getErrorMessage returns a user-friendly error message
+func getErrorMessage(err error, path string) string {
+	if os.IsPermission(err) {
+		return "Permission denied: " + truncatePath(path) + ". Try running with elevated permissions."
+	}
+	if os.IsNotExist(err) {
+		return "File not found: " + truncatePath(path)
+	}
+	// Default to original error message
+	return err.Error()
+}
+
 // DeletePath deletes a single path - convenience wrapper for DeletePaths
 func (a *App) DeletePath(path string, permanent bool) scanner.CleanResult {
 	return a.DeletePaths([]string{path}, permanent)
 }
 
-// CleanCategories cleans the specified category IDs (always moves to trash)
+// CleanCategories cleans the specified category IDs
+// Uses permanent delete setting from user preferences
 func (a *App) CleanCategories(categoryIDs []string) scanner.CleanResult {
 	// Get all categories and collect paths for the specified IDs
 	categories := scanner.GetCategories()
 	var pathsToClean []string
 
 	for _, id := range categoryIDs {
+		// Skip disabled categories
+		if !settings.IsCategoryEnabled(id) {
+			continue
+		}
 		cat := scanner.GetCategoryByID(categories, id)
 		if cat == nil {
 			continue
@@ -193,8 +302,9 @@ func (a *App) CleanCategories(categoryIDs []string) scanner.CleanResult {
 		collectPathsFromCategory(cat, &pathsToClean, nil)
 	}
 
-	// Remove duplicates and delete (move to trash)
-	return a.DeletePaths(uniquePaths(pathsToClean), false)
+	// Remove duplicates and delete using user's preference
+	permanent := settings.GetPermanentDelete()
+	return a.DeletePaths(uniquePaths(pathsToClean), permanent)
 }
 
 // collectPathsFromCategory recursively collects all paths from a category
@@ -291,4 +401,37 @@ func moveToTrash(path string) error {
 	}
 	_ = output
 	return nil
+}
+
+// --- Settings Methods ---
+
+// GetSettings returns the current settings
+func (a *App) GetSettings() *settings.Settings {
+	s, _ := settings.Load()
+	return s
+}
+
+// SaveSettings saves the settings
+func (a *App) SaveSettings(s *settings.Settings) error {
+	return settings.Save(s)
+}
+
+// SetPermanentDelete sets the permanent delete preference
+func (a *App) SetPermanentDelete(permanent bool) error {
+	return settings.SetPermanentDelete(permanent)
+}
+
+// GetPermanentDelete returns whether permanent delete is enabled
+func (a *App) GetPermanentDelete() bool {
+	return settings.GetPermanentDelete()
+}
+
+// SetCategoryEnabled enables or disables a category
+func (a *App) SetCategoryEnabled(categoryID string, enabled bool) error {
+	return settings.SetCategoryEnabled(categoryID, enabled)
+}
+
+// IsCategoryEnabled returns whether a category is enabled
+func (a *App) IsCategoryEnabled(categoryID string) bool {
+	return settings.IsCategoryEnabled(categoryID)
 }

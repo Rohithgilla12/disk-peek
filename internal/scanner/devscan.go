@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -9,6 +10,8 @@ import (
 type DevScanner struct {
 	workers  int
 	callback ProgressCallback
+	ctx      context.Context
+	cancel   context.CancelFunc
 }
 
 // NewDevScanner creates a new DevScanner with the specified number of workers
@@ -24,6 +27,23 @@ func NewDevScanner(workers int) *DevScanner {
 // SetProgressCallback sets a callback for progress updates
 func (s *DevScanner) SetProgressCallback(callback ProgressCallback) {
 	s.callback = callback
+}
+
+// SetContext sets the context for cancellation support
+func (s *DevScanner) SetContext(ctx context.Context) {
+	s.ctx, s.cancel = context.WithCancel(ctx)
+}
+
+// Cancel cancels the current scan operation
+func (s *DevScanner) Cancel() {
+	if s.cancel != nil {
+		s.cancel()
+	}
+}
+
+// IsCancelled returns true if the scan was cancelled
+func (s *DevScanner) IsCancelled() bool {
+	return IsCancelled(s.ctx)
 }
 
 // Scan performs a scan of all developer cache categories
@@ -56,9 +76,20 @@ func (s *DevScanner) Scan() ScanResult {
 	}
 	collectPaths(categories, nil)
 
-	// Scan all paths in parallel
+	// Scan all paths in parallel with context support
 	var results []WalkResult
-	if s.callback != nil {
+	if s.ctx != nil {
+		results = ScanMultiplePathsWithContext(s.ctx, allPaths, s.workers, s.callback)
+		// Check if cancelled
+		if IsCancelled(s.ctx) {
+			return ScanResult{
+				Mode:         ModeDev,
+				Categories:   categories,
+				TotalSize:    0,
+				ScanDuration: time.Since(start),
+			}
+		}
+	} else if s.callback != nil {
 		results = ScanMultiplePathsWithProgress(allPaths, s.workers, s.callback)
 	} else {
 		results = ScanMultiplePaths(allPaths, s.workers)

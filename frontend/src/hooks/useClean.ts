@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { CleanCategories } from "../../wailsjs/go/main/App";
+import { CleanCategories, CancelClean } from "../../wailsjs/go/main/App";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
 import type { scanner } from "../../wailsjs/go/models";
 
@@ -11,7 +11,7 @@ interface CleanProgress {
   currentItem: string;
 }
 
-type CleanState = "idle" | "cleaning" | "completed" | "error";
+type CleanState = "idle" | "cleaning" | "completed" | "error" | "cancelled";
 
 interface UseCleanReturn {
   state: CleanState;
@@ -19,6 +19,7 @@ interface UseCleanReturn {
   progress: CleanProgress;
   error: string | null;
   clean: (categoryIds: string[]) => Promise<void>;
+  cancel: () => void;
   reset: () => void;
 }
 
@@ -62,10 +63,22 @@ export function useClean(): UseCleanReturn {
       }
     );
 
+    const unsubscribeCancelled = EventsOn("clean:cancelled", () => {
+      setState("cancelled");
+      setProgress({
+        current: 0,
+        total: 0,
+        currentPath: "",
+        bytesFreed: 0,
+        currentItem: "",
+      });
+    });
+
     return () => {
       unsubscribeProgress();
       unsubscribeStarted();
       unsubscribeCompleted();
+      unsubscribeCancelled();
     };
   }, []);
 
@@ -91,6 +104,18 @@ export function useClean(): UseCleanReturn {
     }
   }, []);
 
+  const cancel = useCallback(() => {
+    CancelClean();
+    setState("idle");
+    setProgress({
+      current: 0,
+      total: 0,
+      currentPath: "",
+      bytesFreed: 0,
+      currentItem: "",
+    });
+  }, []);
+
   const reset = useCallback(() => {
     setState("idle");
     setResult(null);
@@ -110,6 +135,7 @@ export function useClean(): UseCleanReturn {
     progress,
     error,
     clean,
+    cancel,
     reset,
   };
 }
