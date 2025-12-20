@@ -86,26 +86,26 @@ This document outlines the current state of the project, areas for improvement, 
 
 ## Feature Roadmap
 
-### Phase 1: Foundation (v0.2.0)
+### Phase 1: Foundation (v0.2.0) ✅ COMPLETED
 *Focus: Testing, stability, and essential UX*
 
-- [ ] **Add Go unit tests** for scanner package
+- [x] **Add Go unit tests** for scanner package
   - Test `WalkDirectory`, `WalkDirectoryFast`
   - Test size calculations with mocked filesystems
   - Test category matching logic
 
-- [ ] **Add scan/clean cancellation**
+- [x] **Add scan/clean cancellation**
   - Add context.Context to scanning functions
   - Add "Cancel" button to progress UI
   - Clean up partial results on cancel
 
-- [ ] **Settings panel (basic)**
+- [x] **Settings panel (basic)**
   - Create settings modal/drawer
   - Toggle permanent delete vs. Trash
   - Toggle individual dev categories on/off
   - Persist settings to JSON file
 
-- [ ] **Improve error handling**
+- [x] **Improve error handling**
   - Add error codes and user-friendly messages
   - Show affected paths in error dialogs
   - Add "Retry" option for transient failures
