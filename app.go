@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"disk-peek/internal/cache"
 	"disk-peek/internal/scanner"
 	"disk-peek/internal/settings"
 
@@ -81,6 +82,9 @@ func (a *App) ScanDev() scanner.ScanResult {
 		return result
 	}
 
+	// Save to cache
+	_ = cache.SaveDevScan(result)
+
 	runtime.EventsEmit(a.ctx, "scan:completed", result)
 	return result
 }
@@ -89,6 +93,8 @@ func (a *App) ScanDev() scanner.ScanResult {
 func (a *App) QuickScanDev() scanner.ScanResult {
 	runtime.EventsEmit(a.ctx, "scan:started", nil)
 	result := a.devScanner.QuickScan()
+	// Save to cache
+	_ = cache.SaveDevScan(result)
 	runtime.EventsEmit(a.ctx, "scan:completed", result)
 	return result
 }
@@ -127,6 +133,8 @@ func (a *App) ScanNormal() scanner.FullScanResult {
 		runtime.EventsEmit(a.ctx, "scan:progress", progress)
 	})
 
+	home, _ := os.UserHomeDir()
+
 	runtime.EventsEmit(a.ctx, "scan:started", nil)
 	result := a.normalScanner.Scan()
 
@@ -134,6 +142,9 @@ func (a *App) ScanNormal() scanner.FullScanResult {
 	if a.normalScanner.IsCancelled() {
 		return result
 	}
+
+	// Save to cache
+	_ = cache.SaveNormalScan(result, home)
 
 	runtime.EventsEmit(a.ctx, "scan:completed:normal", result)
 	return result
@@ -163,6 +174,9 @@ func (a *App) ScanNormalPath(path string) scanner.FullScanResult {
 	if a.normalScanner.IsCancelled() {
 		return result
 	}
+
+	// Save to cache
+	_ = cache.SaveNormalScan(result, path)
 
 	runtime.EventsEmit(a.ctx, "scan:completed:normal", result)
 
@@ -434,4 +448,102 @@ func (a *App) SetCategoryEnabled(categoryID string, enabled bool) error {
 // IsCategoryEnabled returns whether a category is enabled
 func (a *App) IsCategoryEnabled(categoryID string) bool {
 	return settings.IsCategoryEnabled(categoryID)
+}
+
+// --- Node Modules Scanner Methods ---
+
+// ScanNodeModules finds all node_modules directories across projects
+func (a *App) ScanNodeModules() scanner.NodeModulesResult {
+	runtime.EventsEmit(a.ctx, "nodemodules:started", nil)
+
+	result := scanner.FindNodeModules(func(current int, path string) {
+		runtime.EventsEmit(a.ctx, "nodemodules:progress", map[string]interface{}{
+			"current": current,
+			"path":    path,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "nodemodules:completed", result)
+	return result
+}
+
+// DeleteNodeModules deletes the specified node_modules directories
+func (a *App) DeleteNodeModules(paths []string) scanner.CleanResult {
+	runtime.EventsEmit(a.ctx, "nodemodules:clean:started", nil)
+
+	permanent := settings.GetPermanentDelete()
+	result := scanner.CleanResult{
+		FreedBytes:     0,
+		DeletedPaths:   []string{},
+		Errors:         []string{},
+		DetailedErrors: []scanner.CleanError{},
+	}
+
+	total := len(paths)
+	for i, path := range paths {
+		// Get size before deletion (use 4 workers for speed)
+		walkResult := scanner.WalkDirectoryFast(path, 4)
+		size := walkResult.Size
+
+		progress := scanner.CleanProgress{
+			Current:     i + 1,
+			Total:       total,
+			CurrentPath: path,
+			BytesFreed:  result.FreedBytes,
+			CurrentItem: truncatePath(path),
+		}
+		runtime.EventsEmit(a.ctx, "nodemodules:clean:progress", progress)
+
+		// Check if path exists
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			continue
+		}
+
+		var err error
+		if permanent {
+			err = os.RemoveAll(path)
+		} else {
+			err = moveToTrash(path)
+		}
+
+		if err != nil {
+			errorCode := getErrorCode(err)
+			errorMsg := getErrorMessage(err, path)
+			result.Errors = append(result.Errors, errorMsg)
+			result.DetailedErrors = append(result.DetailedErrors, scanner.CleanError{
+				Path:    path,
+				Message: errorMsg,
+				Code:    errorCode,
+			})
+			continue
+		}
+
+		result.FreedBytes += size
+		result.DeletedPaths = append(result.DeletedPaths, path)
+	}
+
+	runtime.EventsEmit(a.ctx, "nodemodules:clean:completed", result)
+	return result
+}
+
+// --- Cache Methods ---
+
+// GetCacheInfo returns information about cached scan results
+func (a *App) GetCacheInfo() cache.CacheInfo {
+	return cache.GetCacheInfo()
+}
+
+// LoadCachedDevScan loads a cached dev scan result if available
+func (a *App) LoadCachedDevScan() *cache.CachedDevScan {
+	return cache.LoadDevScan()
+}
+
+// LoadCachedNormalScan loads a cached normal scan result if available
+func (a *App) LoadCachedNormalScan() *cache.CachedNormalScan {
+	return cache.LoadNormalScan()
+}
+
+// ClearCache removes all cached scan results
+func (a *App) ClearCache() error {
+	return cache.ClearCache()
 }

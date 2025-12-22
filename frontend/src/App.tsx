@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import "@/index.css";
 import {
   ModeToggle,
@@ -14,13 +14,14 @@ import {
 import type { scanner } from "../wailsjs/go/models";
 import { useScan } from "@/hooks/useScan";
 import { useClean } from "@/hooks/useClean";
+import { useMenuEvents } from "@/hooks/useMenuEvents";
 import { RefreshCw, Clock, HardDrive, Sparkles, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function App() {
   const [mode, setMode] = useState<ScanMode>("dev");
   const [showSettings, setShowSettings] = useState(false);
-  const { state: scanState, result, progress: scanProgress, error: scanError, scan, cancel: cancelScan, reset: resetScan } = useScan(mode);
+  const { state: scanState, result, progress: scanProgress, error: scanError, scan, quickScan, cancel: cancelScan, reset: resetScan } = useScan(mode);
   const {
     state: cleanState,
     result: cleanResult,
@@ -31,18 +32,21 @@ function App() {
     reset: resetClean
   } = useClean();
 
+  // Ref to ScanResults for programmatic clean trigger
+  const selectedCategoriesRef = useRef<string[]>([]);
+
   // Combined state for UI
   const isScanning = scanState === "scanning";
   const isCleaning = cleanState === "cleaning";
   const isCleanCompleted = cleanState === "completed";
   const isBusy = isScanning || isCleaning;
 
-  const handleModeChange = (newMode: ScanMode) => {
+  const handleModeChange = useCallback((newMode: ScanMode) => {
     if (isBusy) return;
     setMode(newMode);
     resetScan();
     resetClean();
-  };
+  }, [isBusy, resetScan, resetClean]);
 
   const handleClean = async (categoryIds: string[]) => {
     await clean(categoryIds);
@@ -58,6 +62,46 @@ function App() {
     resetClean();
     scan();
   };
+
+  // Track selected categories from ScanResults
+  const handleSelectionChange = useCallback((categoryIds: string[]) => {
+    selectedCategoriesRef.current = categoryIds;
+  }, []);
+
+  // Cancel any running operation
+  const handleCancel = useCallback(() => {
+    if (isScanning) {
+      cancelScan();
+    } else if (isCleaning) {
+      cancelClean();
+    }
+  }, [isScanning, isCleaning, cancelScan, cancelClean]);
+
+  // Menu event handlers
+  useMenuEvents({
+    onScan: () => {
+      if (!isBusy) {
+        scan();
+      }
+    },
+    onQuickScan: () => {
+      if (!isBusy) {
+        quickScan();
+      }
+    },
+    onClean: () => {
+      if (!isBusy && scanState === "completed" && selectedCategoriesRef.current.length > 0) {
+        handleClean(selectedCategoriesRef.current);
+      }
+    },
+    onSettings: () => {
+      if (!isBusy) {
+        setShowSettings(true);
+      }
+    },
+    onModeChange: handleModeChange,
+    onCancel: handleCancel,
+  });
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)] noise-overlay">
@@ -169,7 +213,11 @@ function App() {
 
         {scanState === "completed" && result && !isCleaning && (
           mode === "dev" ? (
-            <ScanResults result={result as scanner.ScanResult} onClean={handleClean} />
+            <ScanResults
+              result={result as scanner.ScanResult}
+              onClean={handleClean}
+              onSelectionChange={handleSelectionChange}
+            />
           ) : (
             <FileTreeResults result={result as scanner.FullScanResult} />
           )

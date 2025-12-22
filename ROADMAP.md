@@ -110,34 +110,37 @@ This document outlines the current state of the project, areas for improvement, 
   - Show affected paths in error dialogs
   - Add "Retry" option for transient failures
 
-### Phase 2: Enhanced Features (v0.3.0)
+### Phase 2: Enhanced Features (v0.3.0) - IN PROGRESS
 *Focus: Power user features and productivity*
 
-- [ ] **Menu bar quick-access mode**
-  - Minimal menu bar icon with dropdown
-  - Quick scan/clean from menu bar
-  - Show disk usage summary
+- [x] **Application menu with keyboard shortcuts**
+  - Native macOS application menu (File, Edit, View)
+  - Quick scan/clean from menu
+  - Keyboard shortcuts for common actions
 
-- [ ] **Find node_modules across projects**
-  - Dedicated scanner for node_modules
-  - Show project name and last modified date
-  - Bulk delete with project selection
-
-- [ ] **Custom paths support**
-  - Add user-defined directories to Dev Clean
-  - Create custom categories
-  - Import/export category configurations
-
-- [ ] **Keyboard shortcuts**
+- [x] **Keyboard shortcuts**
   - `Cmd+R` - Rescan
+  - `Cmd+Shift+R` - Quick Scan
   - `Cmd+D` - Clean selected
   - `Cmd+1/2` - Switch modes
   - `Cmd+,` - Open settings
+  - `Escape` - Cancel operation
 
-- [ ] **Result persistence**
+- [x] **Find node_modules across projects**
+  - Dedicated scanner for node_modules
+  - Show project name and last modified date
+  - Bulk delete with project selection
+  - Backend complete (UI pending)
+
+- [x] **Result persistence**
   - Cache scan results to disk
-  - Show "last scanned" timestamp
   - Quick reload without rescanning
+  - Version-aware cache invalidation
+
+- [ ] **Custom paths support** (planned for v0.3.1)
+  - Add user-defined directories to Dev Clean
+  - Create custom categories
+  - Import/export category configurations
 
 ### Phase 3: Cross-Platform (v0.4.0)
 *Focus: Linux and Windows support*

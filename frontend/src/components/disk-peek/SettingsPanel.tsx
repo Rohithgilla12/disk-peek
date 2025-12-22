@@ -73,12 +73,15 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const handleCategoryToggle = async (categoryId: string, enabled: boolean) => {
     try {
       await SetCategoryEnabled(categoryId, enabled);
-      setSettings((prev) => ({
-        ...prev,
-        disabledCategories: enabled
-          ? { ...prev.disabledCategories, [categoryId]: undefined }
-          : { ...prev.disabledCategories, [categoryId]: true },
-      }));
+      setSettings((prev) => {
+        const newDisabledCategories = { ...prev.disabledCategories };
+        if (enabled) {
+          delete newDisabledCategories[categoryId];
+        } else {
+          newDisabledCategories[categoryId] = true;
+        }
+        return { ...prev, disabledCategories: newDisabledCategories };
+      });
     } catch (err) {
       console.error("Failed to update category setting:", err);
     }
