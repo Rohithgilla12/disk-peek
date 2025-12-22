@@ -109,3 +109,40 @@ export function LoadCachedNormalScan() {
 export function ClearCache() {
   return window['go']['main']['App']['ClearCache']();
 }
+
+// Phase 4: Advanced Features
+export function FindLargeFiles(arg1) {
+  return window['go']['main']['App']['FindLargeFiles'](arg1);
+}
+
+export function FindLargeFilesWithOptions(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['FindLargeFilesWithOptions'](arg1, arg2, arg3, arg4);
+}
+
+export function FindDuplicates() {
+  return window['go']['main']['App']['FindDuplicates']();
+}
+
+export function FindDuplicatesInPath(arg1, arg2) {
+  return window['go']['main']['App']['FindDuplicatesInPath'](arg1, arg2);
+}
+
+export function DeleteDuplicateGroup(arg1) {
+  return window['go']['main']['App']['DeleteDuplicateGroup'](arg1);
+}
+
+export function GetDiskTrends() {
+  return window['go']['main']['App']['GetDiskTrends']();
+}
+
+export function RecordDiskSnapshot(arg1) {
+  return window['go']['main']['App']['RecordDiskSnapshot'](arg1);
+}
+
+export function GetGrowthAlerts(arg1) {
+  return window['go']['main']['App']['GetGrowthAlerts'](arg1);
+}
+
+export function ClearTrendsHistory() {
+  return window['go']['main']['App']['ClearTrendsHistory']();
+}

@@ -110,7 +110,7 @@ This document outlines the current state of the project, areas for improvement, 
   - Show affected paths in error dialogs
   - Add "Retry" option for transient failures
 
-### Phase 2: Enhanced Features (v0.3.0) - IN PROGRESS
+### Phase 2: Enhanced Features (v0.3.0) ✅ COMPLETED
 *Focus: Power user features and productivity*
 
 - [x] **Application menu with keyboard shortcuts**
@@ -142,7 +142,7 @@ This document outlines the current state of the project, areas for improvement, 
   - Create custom categories
   - Import/export category configurations
 
-### Phase 3: Cross-Platform (v0.4.0) - IN PROGRESS
+### Phase 3: Cross-Platform (v0.4.0) ✅ COMPLETED
 *Focus: Linux and Windows support*
 
 - [x] **Cross-platform trash functionality**
@@ -172,30 +172,34 @@ This document outlines the current state of the project, areas for improvement, 
   - Windows: .msi and portable packages
   - Platform testing on Ubuntu/Fedora, Windows 10/11
 
-### Phase 4: Advanced Features (v0.5.0)
+### Phase 4: Advanced Features (v0.5.0) - IN PROGRESS
 *Focus: Intelligence and automation*
 
-- [ ] **Scheduled cleanup**
+- [x] **Large file finder**
+  - Find files larger than configurable threshold (100MB default)
+  - Filter by file type (disk-images, archives, videos, backups, databases)
+  - Exclude patterns for common cache directories
+  - Backend complete (`internal/scanner/largefile.go`)
+
+- [x] **Duplicate file detection**
+  - Two-phase hash-based duplicate finding (size grouping + MD5 hashing)
+  - Partial hashing for large files (first+last 64KB) for performance
+  - Show duplicate groups with wasted space calculation
+  - Backend complete (`internal/scanner/duplicates.go`)
+
+- [x] **Disk usage trends**
+  - Track disk usage snapshots over time
+  - Persistent storage in `~/.config/disk-peek/trends.json`
+  - Growth rate calculation and alerts
+  - 365-day retention with automatic cleanup
+  - Backend complete (`internal/scanner/trends.go`)
+
+- [ ] **Scheduled cleanup** (planned for v0.5.1)
   - Background service for periodic scans
   - Configurable schedule (daily, weekly)
   - Notifications when cleanup threshold reached
 
-- [ ] **Duplicate file detection**
-  - Hash-based duplicate finding
-  - Show duplicate groups with sizes
-  - Smart selection (keep newest, largest, etc.)
-
-- [ ] **Large file finder**
-  - Find files larger than X GB
-  - Filter by file type
-  - Quick preview for media files
-
-- [ ] **Disk usage trends**
-  - Track disk usage over time
-  - Show growth charts
-  - Alert on rapid growth
-
-- [ ] **Smart recommendations**
+- [ ] **Smart recommendations** (planned for v0.6.0)
   - ML-based suggestions for cleanup
   - Learn from user deletion patterns
   - Prioritize by age and access frequency
@@ -230,10 +234,15 @@ This document outlines the current state of the project, areas for improvement, 
 - 5+ keyboard shortcuts
 - Result caching implemented
 
-### v0.4.0 Goals
+### v0.4.0 Goals ✅
 - Linux builds passing CI
 - Windows builds passing CI
 - 3+ platform-specific categories each
+
+### v0.5.0 Goals (In Progress)
+- Large file finder with configurable thresholds
+- Duplicate file detection with hash-based finding
+- Disk usage trends with growth alerts
 
 ---
 

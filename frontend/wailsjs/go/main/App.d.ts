@@ -57,3 +57,22 @@ export function LoadCachedDevScan():Promise<cache.CachedDevScan | null>;
 export function LoadCachedNormalScan():Promise<cache.CachedNormalScan | null>;
 
 export function ClearCache():Promise<void>;
+
+// Phase 4: Advanced Features
+export function FindLargeFiles(arg1:number):Promise<scanner.LargeFilesResult>;
+
+export function FindLargeFilesWithOptions(arg1:string,arg2:number,arg3:number,arg4:Array<string>):Promise<scanner.LargeFilesResult>;
+
+export function FindDuplicates():Promise<scanner.DuplicatesResult>;
+
+export function FindDuplicatesInPath(arg1:string,arg2:number):Promise<scanner.DuplicatesResult>;
+
+export function DeleteDuplicateGroup(arg1:scanner.DuplicateGroup):Promise<scanner.CleanResult>;
+
+export function GetDiskTrends():Promise<scanner.TrendsResult>;
+
+export function RecordDiskSnapshot(arg1:scanner.ScanResult):Promise<void>;
+
+export function GetGrowthAlerts(arg1:number):Promise<Array<scanner.DiskUsageTrend>>;
+
+export function ClearTrendsHistory():Promise<void>;

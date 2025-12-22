@@ -527,3 +527,135 @@ func (a *App) LoadCachedNormalScan() *cache.CachedNormalScan {
 func (a *App) ClearCache() error {
 	return cache.ClearCache()
 }
+
+// --- Advanced Features (Phase 4) ---
+
+// FindLargeFiles scans for files larger than the specified size
+func (a *App) FindLargeFiles(minSizeMB int) scanner.LargeFilesResult {
+	runtime.EventsEmit(a.ctx, "largefile:started", nil)
+
+	home, _ := os.UserHomeDir()
+	options := scanner.DefaultLargeFilesOptions()
+	options.MinSize = int64(minSizeMB) * 1024 * 1024
+
+	result := scanner.FindLargeFiles(home, options, func(scanned int, currentPath string) {
+		runtime.EventsEmit(a.ctx, "largefile:progress", map[string]interface{}{
+			"scanned": scanned,
+			"current": currentPath,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "largefile:completed", result)
+	return result
+}
+
+// FindLargeFilesWithOptions scans for large files with custom options
+func (a *App) FindLargeFilesWithOptions(rootPath string, minSizeMB int, maxResults int, fileTypes []string) scanner.LargeFilesResult {
+	runtime.EventsEmit(a.ctx, "largefile:started", nil)
+
+	if rootPath == "" {
+		rootPath, _ = os.UserHomeDir()
+	}
+
+	options := scanner.DefaultLargeFilesOptions()
+	options.MinSize = int64(minSizeMB) * 1024 * 1024
+	options.MaxResults = maxResults
+	if len(fileTypes) > 0 {
+		options.FileTypes = fileTypes
+	}
+
+	result := scanner.FindLargeFiles(rootPath, options, func(scanned int, currentPath string) {
+		runtime.EventsEmit(a.ctx, "largefile:progress", map[string]interface{}{
+			"scanned": scanned,
+			"current": currentPath,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "largefile:completed", result)
+	return result
+}
+
+// FindDuplicates scans for duplicate files
+func (a *App) FindDuplicates() scanner.DuplicatesResult {
+	runtime.EventsEmit(a.ctx, "duplicates:started", nil)
+
+	home, _ := os.UserHomeDir()
+	options := scanner.DefaultDuplicatesOptions()
+
+	result := scanner.FindDuplicates(home, options, func(phase string, current int, total int) {
+		runtime.EventsEmit(a.ctx, "duplicates:progress", map[string]interface{}{
+			"phase":   phase,
+			"current": current,
+			"total":   total,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "duplicates:completed", result)
+	return result
+}
+
+// FindDuplicatesInPath scans for duplicate files in a specific path
+func (a *App) FindDuplicatesInPath(rootPath string, minSizeKB int) scanner.DuplicatesResult {
+	runtime.EventsEmit(a.ctx, "duplicates:started", nil)
+
+	if rootPath == "" {
+		rootPath, _ = os.UserHomeDir()
+	}
+
+	options := scanner.DefaultDuplicatesOptions()
+	options.MinSize = int64(minSizeKB) * 1024
+
+	result := scanner.FindDuplicates(rootPath, options, func(phase string, current int, total int) {
+		runtime.EventsEmit(a.ctx, "duplicates:progress", map[string]interface{}{
+			"phase":   phase,
+			"current": current,
+			"total":   total,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "duplicates:completed", result)
+	return result
+}
+
+// DeleteDuplicateGroup deletes duplicates from a group, keeping the first (oldest) file
+func (a *App) DeleteDuplicateGroup(group scanner.DuplicateGroup) scanner.CleanResult {
+	permanent := settings.GetPermanentDelete()
+	return scanner.DeleteDuplicates([]scanner.DuplicateGroup{group}, true, permanent)
+}
+
+// GetDiskTrends returns disk usage trends
+func (a *App) GetDiskTrends() scanner.TrendsResult {
+	tm, err := scanner.NewTrendsManager()
+	if err != nil {
+		return scanner.TrendsResult{}
+	}
+	return tm.GetTrends(scanner.GetCategories())
+}
+
+// RecordDiskSnapshot records the current scan result for trend tracking
+func (a *App) RecordDiskSnapshot(result scanner.ScanResult) error {
+	tm, err := scanner.NewTrendsManager()
+	if err != nil {
+		return err
+	}
+	return tm.RecordSnapshot(result)
+}
+
+// GetGrowthAlerts returns categories growing faster than the threshold (MB per day)
+func (a *App) GetGrowthAlerts(thresholdMBPerDay int) []scanner.DiskUsageTrend {
+	tm, err := scanner.NewTrendsManager()
+	if err != nil {
+		return nil
+	}
+	thresholdBytes := int64(thresholdMBPerDay) * 1024 * 1024
+	return tm.GetGrowthAlerts(thresholdBytes)
+}
+
+// ClearTrendsHistory clears all disk usage trend history
+func (a *App) ClearTrendsHistory() error {
+	tm, err := scanner.NewTrendsManager()
+	if err != nil {
+		return err
+	}
+	return tm.ClearHistory()
+}

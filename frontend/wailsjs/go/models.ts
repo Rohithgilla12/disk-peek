@@ -232,6 +232,221 @@ export namespace scanner {
 		}
 	}
 
+	// Phase 4: Large File Finder
+	export class LargeFile {
+	    path: string;
+	    name: string;
+	    size: number;
+	    modTime: any;
+	    isDir: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new LargeFile(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.name = source["name"];
+	        this.size = source["size"];
+	        this.modTime = source["modTime"];
+	        this.isDir = source["isDir"];
+	    }
+	}
+
+	export class LargeFilesResult {
+	    files: LargeFile[];
+	    totalSize: number;
+	    totalCount: number;
+	    scanDuration: number;
+	    threshold: number;
+
+	    static createFrom(source: any = {}) {
+	        return new LargeFilesResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.files = this.convertValues(source["files"], LargeFile);
+	        this.totalSize = source["totalSize"];
+	        this.totalCount = source["totalCount"];
+	        this.scanDuration = source["scanDuration"];
+	        this.threshold = source["threshold"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) { return a; }
+		    if (a.slice && a.map) { return (a as any[]).map(elem => this.convertValues(elem, classs)); }
+		    if ("object" === typeof a) { return asMap ? Object.fromEntries(Object.entries(a).map(([k, v]) => [k, new classs(v)])) : new classs(a); }
+		    return a;
+		}
+	}
+
+	// Phase 4: Duplicate File Detection
+	export class DuplicateFile {
+	    path: string;
+	    name: string;
+	    size: number;
+	    modTime: any;
+	    hash: string;
+
+	    static createFrom(source: any = {}) {
+	        return new DuplicateFile(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.name = source["name"];
+	        this.size = source["size"];
+	        this.modTime = source["modTime"];
+	        this.hash = source["hash"];
+	    }
+	}
+
+	export class DuplicateGroup {
+	    hash: string;
+	    size: number;
+	    files: DuplicateFile[];
+	    wastedSize: number;
+
+	    static createFrom(source: any = {}) {
+	        return new DuplicateGroup(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hash = source["hash"];
+	        this.size = source["size"];
+	        this.files = this.convertValues(source["files"], DuplicateFile);
+	        this.wastedSize = source["wastedSize"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) { return a; }
+		    if (a.slice && a.map) { return (a as any[]).map(elem => this.convertValues(elem, classs)); }
+		    if ("object" === typeof a) { return asMap ? Object.fromEntries(Object.entries(a).map(([k, v]) => [k, new classs(v)])) : new classs(a); }
+		    return a;
+		}
+	}
+
+	export class DuplicatesResult {
+	    groups: DuplicateGroup[];
+	    totalWasted: number;
+	    totalFiles: number;
+	    totalGroups: number;
+	    scanDuration: number;
+
+	    static createFrom(source: any = {}) {
+	        return new DuplicatesResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.groups = this.convertValues(source["groups"], DuplicateGroup);
+	        this.totalWasted = source["totalWasted"];
+	        this.totalFiles = source["totalFiles"];
+	        this.totalGroups = source["totalGroups"];
+	        this.scanDuration = source["scanDuration"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) { return a; }
+		    if (a.slice && a.map) { return (a as any[]).map(elem => this.convertValues(elem, classs)); }
+		    if ("object" === typeof a) { return asMap ? Object.fromEntries(Object.entries(a).map(([k, v]) => [k, new classs(v)])) : new classs(a); }
+		    return a;
+		}
+	}
+
+	// Phase 4: Disk Usage Trends
+	export class TrendDataPoint {
+	    timestamp: any;
+	    size: number;
+
+	    static createFrom(source: any = {}) {
+	        return new TrendDataPoint(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.timestamp = source["timestamp"];
+	        this.size = source["size"];
+	    }
+	}
+
+	export class DiskUsageTrend {
+	    categoryId: string;
+	    categoryName: string;
+	    dataPoints: TrendDataPoint[];
+	    growthRate: number;
+	    totalChange: number;
+
+	    static createFrom(source: any = {}) {
+	        return new DiskUsageTrend(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.categoryId = source["categoryId"];
+	        this.categoryName = source["categoryName"];
+	        this.dataPoints = this.convertValues(source["dataPoints"], TrendDataPoint);
+	        this.growthRate = source["growthRate"];
+	        this.totalChange = source["totalChange"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) { return a; }
+		    if (a.slice && a.map) { return (a as any[]).map(elem => this.convertValues(elem, classs)); }
+		    if ("object" === typeof a) { return asMap ? Object.fromEntries(Object.entries(a).map(([k, v]) => [k, new classs(v)])) : new classs(a); }
+		    return a;
+		}
+	}
+
+	export class DiskUsageSnapshot {
+	    timestamp: any;
+	    totalSize: number;
+	    categories: Record<string, number>;
+
+	    static createFrom(source: any = {}) {
+	        return new DiskUsageSnapshot(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.timestamp = source["timestamp"];
+	        this.totalSize = source["totalSize"];
+	        this.categories = source["categories"] || {};
+	    }
+	}
+
+	export class TrendsResult {
+	    snapshots: DiskUsageSnapshot[];
+	    categoryTrends: DiskUsageTrend[];
+	    totalTrend: DiskUsageTrend;
+	    oldestSnapshot: any;
+	    newestSnapshot: any;
+
+	    static createFrom(source: any = {}) {
+	        return new TrendsResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.snapshots = this.convertValues(source["snapshots"], DiskUsageSnapshot);
+	        this.categoryTrends = this.convertValues(source["categoryTrends"], DiskUsageTrend);
+	        this.totalTrend = source["totalTrend"];
+	        this.oldestSnapshot = source["oldestSnapshot"];
+	        this.newestSnapshot = source["newestSnapshot"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) { return a; }
+		    if (a.slice && a.map) { return (a as any[]).map(elem => this.convertValues(elem, classs)); }
+		    if ("object" === typeof a) { return asMap ? Object.fromEntries(Object.entries(a).map(([k, v]) => [k, new classs(v)])) : new classs(a); }
+		    return a;
+		}
+	}
+
 }
 
 export namespace settings {
