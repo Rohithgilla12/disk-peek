@@ -142,24 +142,35 @@ This document outlines the current state of the project, areas for improvement, 
   - Create custom categories
   - Import/export category configurations
 
-### Phase 3: Cross-Platform (v0.4.0)
+### Phase 3: Cross-Platform (v0.4.0) - IN PROGRESS
 *Focus: Linux and Windows support*
 
-- [ ] **Linux support**
-  - Replace AppleScript with native trash (freedesktop.org spec)
-  - Add Linux-specific cache paths
-  - Test on Ubuntu/Fedora
-  - Package as .deb and .AppImage
+- [x] **Cross-platform trash functionality**
+  - Unified trash package (`internal/trash/trash.go`)
+  - macOS: AppleScript with Finder for "Put Back" support
+  - Linux: gio/trash-cli with FreeDesktop.org Trash spec fallback
+  - Windows: PowerShell with Shell.Application COM object
 
-- [ ] **Windows support**
-  - Replace AppleScript with PowerShell/COM for Recycle Bin
-  - Add Windows-specific cache paths (%LOCALAPPDATA%, etc.)
-  - Test on Windows 10/11
-  - Package as .msi and portable
+- [x] **Platform-agnostic categories**
+  - Refactored categories.go for multi-platform support
+  - Cross-platform categories (Node.js, Rust, Go, Gradle, Maven, Android)
+  - Platform-specific categories (Xcode/Homebrew on macOS, Snap/Flatpak on Linux, VS Code/NuGet on Windows)
+  - Platform detection and path resolution
 
-- [ ] **Platform-agnostic categories**
-  - Refactor categories.go to support multi-platform paths
-  - Add platform detection and path resolution
+- [x] **Linux support** (core implementation)
+  - Linux-specific cache paths (~/.cache, ~/.local/share)
+  - Categories: Docker, Snap, Flatpak, Thumbnails, Trash
+  - FreeDesktop.org Trash specification support
+
+- [x] **Windows support** (core implementation)
+  - Windows-specific paths (%LOCALAPPDATA%, %APPDATA%, %TEMP%)
+  - Categories: Temp files, Docker, VS Code, NuGet, Edge/Chrome cache
+  - PowerShell-based Recycle Bin integration
+
+- [ ] **Platform packaging** (pending)
+  - Linux: .deb and .AppImage packages
+  - Windows: .msi and portable packages
+  - Platform testing on Ubuntu/Fedora, Windows 10/11
 
 ### Phase 4: Advanced Features (v0.5.0)
 *Focus: Intelligence and automation*

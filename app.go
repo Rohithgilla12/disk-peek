@@ -3,12 +3,11 @@ package main
 import (
 	"context"
 	"os"
-	"os/exec"
-	"strings"
 
 	"disk-peek/internal/cache"
 	"disk-peek/internal/scanner"
 	"disk-peek/internal/settings"
+	"disk-peek/internal/trash"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -393,28 +392,9 @@ func joinPath(parts []string) string {
 	return result
 }
 
-// moveToTrash moves a file/directory to the system trash
+// moveToTrash moves a file/directory to the system trash (cross-platform)
 func moveToTrash(path string) error {
-	// Check if path exists
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil // Already doesn't exist, consider it success
-	}
-
-	// Escape backslashes and double quotes for AppleScript string
-	escapedPath := strings.ReplaceAll(path, `\`, `\\`)
-	escapedPath = strings.ReplaceAll(escapedPath, `"`, `\"`)
-
-	// Use macOS trash command via osascript for proper Trash behavior
-	// This preserves the "Put Back" functionality
-	cmd := exec.Command("osascript", "-e",
-		`tell application "Finder" to delete POSIX file "`+escapedPath+`"`)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		// Fallback: try direct removal if Finder fails
-		return os.RemoveAll(path)
-	}
-	_ = output
-	return nil
+	return trash.MoveToTrash(path)
 }
 
 // --- Settings Methods ---

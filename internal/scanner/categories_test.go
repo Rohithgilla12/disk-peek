@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"runtime"
 	"testing"
 )
 
@@ -30,11 +31,10 @@ func TestGetCategories(t *testing.T) {
 		}
 	})
 
-	t.Run("known categories exist", func(t *testing.T) {
+	t.Run("cross-platform categories exist", func(t *testing.T) {
+		// These categories should exist on all platforms
 		expectedIDs := []string{
-			"xcode", "simulators", "swift-packages", "node",
-			"homebrew", "rust", "go", "gradle", "maven",
-			"docker", "android", "system-caches", "system-logs",
+			"node", "rust", "go", "gradle", "maven", "android",
 		}
 
 		for _, expectedID := range expectedIDs {
@@ -46,32 +46,34 @@ func TestGetCategories(t *testing.T) {
 				}
 			}
 			if !found {
-				t.Errorf("expected category %s not found", expectedID)
+				t.Errorf("expected cross-platform category %s not found", expectedID)
 			}
 		}
 	})
 
-	t.Run("xcode has children", func(t *testing.T) {
-		for _, cat := range categories {
-			if cat.ID == "xcode" {
-				if len(cat.Children) == 0 {
-					t.Error("xcode category should have children")
+	t.Run("platform-specific categories exist", func(t *testing.T) {
+		var expectedIDs []string
+		switch runtime.GOOS {
+		case "darwin":
+			expectedIDs = []string{"xcode", "simulators", "swift-packages", "homebrew", "system-caches", "system-logs"}
+		case "linux":
+			expectedIDs = []string{"system-caches", "snap", "flatpak", "thumbnails", "trash"}
+		case "windows":
+			expectedIDs = []string{"windows-temp", "vscode-cache", "nuget", "edge-cache", "chrome-cache"}
+		}
+
+		for _, expectedID := range expectedIDs {
+			found := false
+			for _, cat := range categories {
+				if cat.ID == expectedID {
+					found = true
+					break
 				}
-				// Check child IDs
-				childIDs := make(map[string]bool)
-				for _, child := range cat.Children {
-					childIDs[child.ID] = true
-				}
-				expectedChildren := []string{"xcode-derived", "xcode-archives", "xcode-devices", "xcode-watchos"}
-				for _, expectedChild := range expectedChildren {
-					if !childIDs[expectedChild] {
-						t.Errorf("xcode missing child %s", expectedChild)
-					}
-				}
-				return
+			}
+			if !found {
+				t.Errorf("expected platform-specific category %s not found on %s", expectedID, runtime.GOOS)
 			}
 		}
-		t.Error("xcode category not found")
 	})
 
 	t.Run("leaf categories have paths", func(t *testing.T) {
@@ -118,10 +120,10 @@ func TestFlattenCategories(t *testing.T) {
 		}
 	})
 
-	t.Run("contains expected leaf categories", func(t *testing.T) {
+	t.Run("contains cross-platform leaf categories", func(t *testing.T) {
+		// These leaf categories should exist on all platforms
 		expectedLeafs := []string{
-			"xcode-derived", "xcode-archives", "npm-cache", "yarn-cache",
-			"cargo-registry", "gradle", "maven", "docker",
+			"npm-cache", "yarn-cache", "cargo-registry", "gradle", "maven",
 		}
 
 		flatIDs := make(map[string]bool)
@@ -140,29 +142,18 @@ func TestFlattenCategories(t *testing.T) {
 func TestGetCategoryByID(t *testing.T) {
 	categories := GetCategories()
 
-	t.Run("find top-level category", func(t *testing.T) {
-		cat := GetCategoryByID(categories, "xcode")
+	t.Run("find cross-platform category", func(t *testing.T) {
+		cat := GetCategoryByID(categories, "node")
 		if cat == nil {
-			t.Error("expected to find xcode category")
+			t.Error("expected to find node category")
 			return
 		}
-		if cat.Name != "Xcode" {
-			t.Errorf("Name = %s, want Xcode", cat.Name)
+		if cat.Name != "Node.js" {
+			t.Errorf("Name = %s, want Node.js", cat.Name)
 		}
 	})
 
 	t.Run("find nested category", func(t *testing.T) {
-		cat := GetCategoryByID(categories, "xcode-derived")
-		if cat == nil {
-			t.Error("expected to find xcode-derived category")
-			return
-		}
-		if cat.Name != "DerivedData" {
-			t.Errorf("Name = %s, want DerivedData", cat.Name)
-		}
-	})
-
-	t.Run("find deeply nested category", func(t *testing.T) {
 		cat := GetCategoryByID(categories, "npm-cache")
 		if cat == nil {
 			t.Error("expected to find npm-cache category")
@@ -170,6 +161,33 @@ func TestGetCategoryByID(t *testing.T) {
 		}
 		if cat.Name != "npm Cache" {
 			t.Errorf("Name = %s, want npm Cache", cat.Name)
+		}
+	})
+
+	t.Run("find platform-specific category", func(t *testing.T) {
+		var categoryID, expectedName string
+		switch runtime.GOOS {
+		case "darwin":
+			categoryID = "xcode"
+			expectedName = "Xcode"
+		case "linux":
+			categoryID = "snap"
+			expectedName = "Snap"
+		case "windows":
+			categoryID = "windows-temp"
+			expectedName = "Temp Files"
+		default:
+			t.Skip("unsupported platform")
+			return
+		}
+
+		cat := GetCategoryByID(categories, categoryID)
+		if cat == nil {
+			t.Errorf("expected to find %s category on %s", categoryID, runtime.GOOS)
+			return
+		}
+		if cat.Name != expectedName {
+			t.Errorf("Name = %s, want %s", cat.Name, expectedName)
 		}
 	})
 
@@ -188,7 +206,7 @@ func TestGetCategoryByID(t *testing.T) {
 	})
 
 	t.Run("empty categories list returns nil", func(t *testing.T) {
-		cat := GetCategoryByID([]Category{}, "xcode")
+		cat := GetCategoryByID([]Category{}, "node")
 		if cat != nil {
 			t.Error("expected nil for empty categories list")
 		}
@@ -260,8 +278,23 @@ func TestCategoryStructure(t *testing.T) {
 	})
 }
 
-func TestPnpmMultiplePaths(t *testing.T) {
-	// pnpm has multiple possible paths
+func TestPlatformDetection(t *testing.T) {
+	t.Run("GetCurrentPlatform returns runtime.GOOS", func(t *testing.T) {
+		platform := GetCurrentPlatform()
+		if platform != runtime.GOOS {
+			t.Errorf("GetCurrentPlatform() = %s, want %s", platform, runtime.GOOS)
+		}
+	})
+
+	t.Run("IsPlatformSupported returns true for supported platforms", func(t *testing.T) {
+		// Current platform should be supported if we're running tests
+		if !IsPlatformSupported() {
+			t.Error("current platform should be supported")
+		}
+	})
+}
+
+func TestPnpmPaths(t *testing.T) {
 	categories := GetCategories()
 	cat := GetCategoryByID(categories, "pnpm-cache")
 
@@ -270,7 +303,13 @@ func TestPnpmMultiplePaths(t *testing.T) {
 		return
 	}
 
-	if len(cat.Paths) < 2 {
-		t.Errorf("pnpm-cache should have multiple paths, got %d", len(cat.Paths))
+	// pnpm has at least 1 path on all platforms, and 2 on macOS
+	if len(cat.Paths) == 0 {
+		t.Error("pnpm-cache should have at least one path")
+	}
+
+	// On macOS, pnpm has 2 paths
+	if runtime.GOOS == "darwin" && len(cat.Paths) < 2 {
+		t.Errorf("pnpm-cache should have multiple paths on macOS, got %d", len(cat.Paths))
 	}
 }

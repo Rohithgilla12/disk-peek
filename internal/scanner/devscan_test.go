@@ -3,6 +3,7 @@ package scanner
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -97,15 +98,15 @@ func TestDevScannerQuickScan(t *testing.T) {
 func TestDevScannerScanCategory(t *testing.T) {
 	scanner := NewDevScanner(2)
 
-	t.Run("existing category", func(t *testing.T) {
-		// Scan xcode category
-		cat := scanner.ScanCategory("xcode")
+	t.Run("existing cross-platform category", func(t *testing.T) {
+		// Scan node category (cross-platform)
+		cat := scanner.ScanCategory("node")
 		if cat == nil {
 			t.Error("expected non-nil category")
 			return
 		}
-		if cat.ID != "xcode" {
-			t.Errorf("ID = %s, want xcode", cat.ID)
+		if cat.ID != "node" {
+			t.Errorf("ID = %s, want node", cat.ID)
 		}
 	})
 
@@ -117,13 +118,38 @@ func TestDevScannerScanCategory(t *testing.T) {
 	})
 
 	t.Run("leaf category", func(t *testing.T) {
-		cat := scanner.ScanCategory("xcode-derived")
+		// npm-cache is a leaf category that exists on all platforms
+		cat := scanner.ScanCategory("npm-cache")
 		if cat == nil {
 			t.Error("expected non-nil category")
 			return
 		}
-		if cat.ID != "xcode-derived" {
-			t.Errorf("ID = %s, want xcode-derived", cat.ID)
+		if cat.ID != "npm-cache" {
+			t.Errorf("ID = %s, want npm-cache", cat.ID)
+		}
+	})
+
+	t.Run("platform-specific category", func(t *testing.T) {
+		var categoryID string
+		switch runtime.GOOS {
+		case "darwin":
+			categoryID = "xcode"
+		case "linux":
+			categoryID = "snap"
+		case "windows":
+			categoryID = "windows-temp"
+		default:
+			t.Skip("unsupported platform")
+			return
+		}
+
+		cat := scanner.ScanCategory(categoryID)
+		if cat == nil {
+			t.Errorf("expected non-nil category for %s on %s", categoryID, runtime.GOOS)
+			return
+		}
+		if cat.ID != categoryID {
+			t.Errorf("ID = %s, want %s", cat.ID, categoryID)
 		}
 	})
 }
