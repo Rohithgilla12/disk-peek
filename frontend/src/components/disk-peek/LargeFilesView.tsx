@@ -4,15 +4,21 @@ import { Button } from "@/components/ui/button";
 import { FileBox, Trash2, Search, Loader2, FolderOpen, File, Clock } from "lucide-react";
 import { DeletePath } from "../../../wailsjs/go/main/App";
 
+interface Progress {
+  scanned: number;
+  current: string;
+}
+
 interface LargeFilesViewProps {
   state: "idle" | "scanning" | "completed" | "error";
   result: scanner.LargeFilesResult | null;
   error: string | null;
+  progress: Progress | null;
   onScan: (minSizeMB?: number) => void;
   onReset: () => void;
 }
 
-export function LargeFilesView({ state, result, error, onScan, onReset }: LargeFilesViewProps) {
+export function LargeFilesView({ state, result, error, progress, onScan, onReset }: LargeFilesViewProps) {
   const [minSizeMB, setMinSizeMB] = useState(100);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const [deletedPaths, setDeletedPaths] = useState<Set<string>>(new Set());
@@ -29,8 +35,8 @@ export function LargeFilesView({ state, result, error, onScan, onReset }: LargeF
     }
   };
 
-  // Filter out deleted files
-  const visibleFiles = result?.files.filter((f) => !deletedPaths.has(f.path)) || [];
+  // Filter out deleted files (handle null/undefined files array)
+  const visibleFiles = (result?.files ?? []).filter((f) => !deletedPaths.has(f.path));
 
   if (state === "idle") {
     return (
@@ -71,6 +77,11 @@ export function LargeFilesView({ state, result, error, onScan, onReset }: LargeF
   }
 
   if (state === "scanning") {
+    const currentPath = progress?.current || "";
+    const shortPath = currentPath.length > 50
+      ? "..." + currentPath.slice(-47)
+      : currentPath;
+
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <div className="relative mb-6">
@@ -78,7 +89,17 @@ export function LargeFilesView({ state, result, error, onScan, onReset }: LargeF
           <FileBox size={32} className="text-[var(--color-warning)] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
         </div>
         <h2 className="text-lg font-semibold text-[var(--color-text)] mb-2">Scanning for large files...</h2>
-        <p className="text-sm text-[var(--color-text-muted)]">Looking for files larger than {minSizeMB} MB</p>
+        <p className="text-sm text-[var(--color-text-muted)] mb-3">Looking for files larger than {minSizeMB} MB</p>
+        {progress && (
+          <div className="text-center max-w-md">
+            <p className="text-sm font-mono text-[var(--color-warning)] mb-1">
+              {progress.scanned.toLocaleString()} files scanned
+            </p>
+            <p className="text-xs text-[var(--color-text-muted)] truncate" title={currentPath}>
+              {shortPath}
+            </p>
+          </div>
+        )}
       </div>
     );
   }

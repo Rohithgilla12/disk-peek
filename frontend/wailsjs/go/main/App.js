@@ -14,6 +14,22 @@ export function CleanCategories(arg1) {
   return window['go']['main']['App']['CleanCategories'](arg1);
 }
 
+export function ClearCache() {
+  return window['go']['main']['App']['ClearCache']();
+}
+
+export function ClearTrendsHistory() {
+  return window['go']['main']['App']['ClearTrendsHistory']();
+}
+
+export function DeleteDuplicateGroup(arg1) {
+  return window['go']['main']['App']['DeleteDuplicateGroup'](arg1);
+}
+
+export function DeleteNodeModules(arg1) {
+  return window['go']['main']['App']['DeleteNodeModules'](arg1);
+}
+
 export function DeletePath(arg1, arg2) {
   return window['go']['main']['App']['DeletePath'](arg1, arg2);
 }
@@ -22,8 +38,28 @@ export function DeletePaths(arg1, arg2) {
   return window['go']['main']['App']['DeletePaths'](arg1, arg2);
 }
 
+export function FindDuplicates() {
+  return window['go']['main']['App']['FindDuplicates']();
+}
+
+export function FindDuplicatesInPath(arg1, arg2) {
+  return window['go']['main']['App']['FindDuplicatesInPath'](arg1, arg2);
+}
+
+export function FindLargeFiles(arg1) {
+  return window['go']['main']['App']['FindLargeFiles'](arg1);
+}
+
+export function FindLargeFilesWithOptions(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['FindLargeFilesWithOptions'](arg1, arg2, arg3, arg4);
+}
+
 export function FormatSize(arg1) {
   return window['go']['main']['App']['FormatSize'](arg1);
+}
+
+export function GetCacheInfo() {
+  return window['go']['main']['App']['GetCacheInfo']();
 }
 
 export function GetCategoryItems(arg1) {
@@ -36,6 +72,14 @@ export function GetDevCategories() {
 
 export function GetDirectoryChildren(arg1) {
   return window['go']['main']['App']['GetDirectoryChildren'](arg1);
+}
+
+export function GetDiskTrends() {
+  return window['go']['main']['App']['GetDiskTrends']();
+}
+
+export function GetGrowthAlerts(arg1) {
+  return window['go']['main']['App']['GetGrowthAlerts'](arg1);
 }
 
 export function GetHomeDir() {
@@ -54,8 +98,20 @@ export function IsCategoryEnabled(arg1) {
   return window['go']['main']['App']['IsCategoryEnabled'](arg1);
 }
 
+export function LoadCachedDevScan() {
+  return window['go']['main']['App']['LoadCachedDevScan']();
+}
+
+export function LoadCachedNormalScan() {
+  return window['go']['main']['App']['LoadCachedNormalScan']();
+}
+
 export function QuickScanDev() {
   return window['go']['main']['App']['QuickScanDev']();
+}
+
+export function RecordDiskSnapshot(arg1) {
+  return window['go']['main']['App']['RecordDiskSnapshot'](arg1);
 }
 
 export function SaveSettings(arg1) {
@@ -68,6 +124,10 @@ export function ScanCategory(arg1) {
 
 export function ScanDev() {
   return window['go']['main']['App']['ScanDev']();
+}
+
+export function ScanNodeModules() {
+  return window['go']['main']['App']['ScanNodeModules']();
 }
 
 export function ScanNormal() {
@@ -84,65 +144,4 @@ export function SetCategoryEnabled(arg1, arg2) {
 
 export function SetPermanentDelete(arg1) {
   return window['go']['main']['App']['SetPermanentDelete'](arg1);
-}
-
-export function ScanNodeModules() {
-  return window['go']['main']['App']['ScanNodeModules']();
-}
-
-export function DeleteNodeModules(arg1) {
-  return window['go']['main']['App']['DeleteNodeModules'](arg1);
-}
-
-export function GetCacheInfo() {
-  return window['go']['main']['App']['GetCacheInfo']();
-}
-
-export function LoadCachedDevScan() {
-  return window['go']['main']['App']['LoadCachedDevScan']();
-}
-
-export function LoadCachedNormalScan() {
-  return window['go']['main']['App']['LoadCachedNormalScan']();
-}
-
-export function ClearCache() {
-  return window['go']['main']['App']['ClearCache']();
-}
-
-// Phase 4: Advanced Features
-export function FindLargeFiles(arg1) {
-  return window['go']['main']['App']['FindLargeFiles'](arg1);
-}
-
-export function FindLargeFilesWithOptions(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['FindLargeFilesWithOptions'](arg1, arg2, arg3, arg4);
-}
-
-export function FindDuplicates() {
-  return window['go']['main']['App']['FindDuplicates']();
-}
-
-export function FindDuplicatesInPath(arg1, arg2) {
-  return window['go']['main']['App']['FindDuplicatesInPath'](arg1, arg2);
-}
-
-export function DeleteDuplicateGroup(arg1) {
-  return window['go']['main']['App']['DeleteDuplicateGroup'](arg1);
-}
-
-export function GetDiskTrends() {
-  return window['go']['main']['App']['GetDiskTrends']();
-}
-
-export function RecordDiskSnapshot(arg1) {
-  return window['go']['main']['App']['RecordDiskSnapshot'](arg1);
-}
-
-export function GetGrowthAlerts(arg1) {
-  return window['go']['main']['App']['GetGrowthAlerts'](arg1);
-}
-
-export function ClearTrendsHistory() {
-  return window['go']['main']['App']['ClearTrendsHistory']();
 }

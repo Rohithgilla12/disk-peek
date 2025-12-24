@@ -72,6 +72,7 @@ export function ToolsPanel({ onClose }: ToolsPanelProps) {
             state={largeFiles.state}
             result={largeFiles.result}
             error={largeFiles.error}
+            progress={largeFiles.progress}
             onScan={largeFiles.scan}
             onReset={largeFiles.reset}
           />

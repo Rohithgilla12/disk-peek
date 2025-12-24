@@ -64,7 +64,7 @@ func FindLargeFiles(rootPath string, options LargeFilesOptions, progressCallback
 		rootPath, _ = os.UserHomeDir()
 	}
 
-	var files []LargeFile
+	files := make([]LargeFile, 0)
 	var mu sync.Mutex
 	var scanned int
 
@@ -94,7 +94,7 @@ func FindLargeFiles(rootPath string, options LargeFilesOptions, progressCallback
 		}
 
 		scanned++
-		if progressCallback != nil && scanned%1000 == 0 {
+		if progressCallback != nil && scanned%100 == 0 {
 			progressCallback(scanned, path)
 		}
 
