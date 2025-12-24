@@ -20,6 +20,7 @@ type ScanResultUnion = scanner.ScanResult | scanner.FullScanResult;
 interface ScanCache {
   dev: { state: ScanState; result: ScanResultUnion | null } | null;
   normal: { state: ScanState; result: ScanResultUnion | null } | null;
+  tools: { state: ScanState; result: ScanResultUnion | null } | null;
 }
 
 interface UseScanReturn {
@@ -37,6 +38,7 @@ interface UseScanReturn {
 const scanCache: ScanCache = {
   dev: null,
   normal: null,
+  tools: null,
 };
 
 export function useScan(mode: ScanMode): UseScanReturn {

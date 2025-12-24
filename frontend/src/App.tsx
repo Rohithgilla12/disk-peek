@@ -9,6 +9,7 @@ import {
   FileTreeResults,
   CleanCompletedDialog,
   SettingsPanel,
+  ToolsPanel,
   type ScanMode,
 } from "@/components/disk-peek";
 import type { scanner } from "../wailsjs/go/models";
@@ -124,7 +125,7 @@ function App() {
                 Disk Peek
               </h1>
               <p className="text-xs text-[var(--color-text-muted)]">
-                {mode === "dev" ? "Clean up dev clutter" : "Explore your storage"}
+                {mode === "dev" ? "Clean up dev clutter" : mode === "tools" ? "Advanced analysis tools" : "Explore your storage"}
               </p>
             </div>
           </div>
@@ -186,7 +187,7 @@ function App() {
         )}
 
         {/* Content based on state */}
-        {scanState === "idle" && !isCleaning && !isCleanCompleted && (
+        {scanState === "idle" && !isCleaning && !isCleanCompleted && mode !== "tools" && (
           <EmptyState mode={mode} onScan={scan} isScanning={false} />
         )}
 
@@ -211,7 +212,7 @@ function App() {
           />
         )}
 
-        {scanState === "completed" && result && !isCleaning && (
+        {scanState === "completed" && result && !isCleaning && mode !== "tools" && (
           mode === "dev" ? (
             <ScanResults
               result={result as scanner.ScanResult}
@@ -221,6 +222,10 @@ function App() {
           ) : (
             <FileTreeResults result={result as scanner.FullScanResult} />
           )
+        )}
+
+        {mode === "tools" && !isCleaning && !isCleanCompleted && (
+          <ToolsPanel />
         )}
 
         {/* Clean completed dialog - shows over the scan results */}
@@ -256,7 +261,9 @@ function App() {
                     ? "Cleaning complete!"
                     : mode === "dev"
                       ? "Ready to clean dev caches"
-                      : "Ready to explore"
+                      : mode === "tools"
+                        ? "Analysis tools ready"
+                        : "Ready to explore"
               }
             </span>
           </div>
