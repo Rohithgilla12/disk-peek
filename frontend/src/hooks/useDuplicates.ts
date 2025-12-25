@@ -34,15 +34,8 @@ export function useDuplicates(): UseDuplicatesReturn {
 
   const deleteGroup = useCallback(async (group: scanner.DuplicateGroup, keepIndex: number) => {
     try {
-      // Create a modified group that marks which file to keep
-      const modifiedGroup = {
-        ...group,
-        files: group.files.map((f, i) => ({
-          ...f,
-          keep: i === keepIndex,
-        })),
-      };
-      await DeleteDuplicateGroup(modifiedGroup as unknown as scanner.DuplicateGroup);
+      // Pass the group and keepIndex to the backend
+      await DeleteDuplicateGroup(group, keepIndex);
 
       // Remove the group from results
       if (result) {

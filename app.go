@@ -617,10 +617,10 @@ func (a *App) FindDuplicatesInPath(rootPath string, minSizeKB int) scanner.Dupli
 	return result
 }
 
-// DeleteDuplicateGroup deletes duplicates from a group, keeping the first (oldest) file
-func (a *App) DeleteDuplicateGroup(group scanner.DuplicateGroup) scanner.CleanResult {
+// DeleteDuplicateGroup deletes duplicates from a group, keeping the file at keepIndex
+func (a *App) DeleteDuplicateGroup(group scanner.DuplicateGroup, keepIndex int) scanner.CleanResult {
 	permanent := settings.GetPermanentDelete()
-	return scanner.DeleteDuplicates([]scanner.DuplicateGroup{group}, true, permanent)
+	return scanner.DeleteDuplicates([]scanner.DuplicateGroup{group}, keepIndex, permanent, trash.MoveToTrash)
 }
 
 // GetDiskTrends returns disk usage trends

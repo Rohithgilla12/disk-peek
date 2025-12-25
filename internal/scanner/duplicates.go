@@ -290,8 +290,9 @@ func hashFile(path string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-// DeleteDuplicates deletes duplicate files, keeping the first (oldest) in each group
-func DeleteDuplicates(groups []DuplicateGroup, keepFirst bool, permanent bool) CleanResult {
+// DeleteDuplicates deletes duplicate files, keeping the specified index in each group
+// If keepIndex is -1, keeps the first (oldest) file
+func DeleteDuplicates(groups []DuplicateGroup, keepIndex int, permanent bool, trashFunc func(string) error) CleanResult {
 	result := CleanResult{
 		FreedBytes:     0,
 		DeletedPaths:   []string{},
@@ -300,22 +301,25 @@ func DeleteDuplicates(groups []DuplicateGroup, keepFirst bool, permanent bool) C
 	}
 
 	for _, group := range groups {
-		// Determine which files to delete
-		var toDelete []DuplicateFile
-		if keepFirst {
-			// Keep the first (oldest) file
-			toDelete = group.Files[1:]
-		} else {
-			// Delete all duplicates (user selected)
-			toDelete = group.Files
+		// Determine which file to keep
+		keepIdx := keepIndex
+		if keepIdx < 0 || keepIdx >= len(group.Files) {
+			keepIdx = 0 // Default to keeping the first (oldest) file
 		}
 
-		for _, file := range toDelete {
+		for i, file := range group.Files {
+			// Skip the file we want to keep
+			if i == keepIdx {
+				continue
+			}
+
 			var err error
 			if permanent {
 				err = os.Remove(file.Path)
+			} else if trashFunc != nil {
+				err = trashFunc(file.Path)
 			} else {
-				err = os.Remove(file.Path) // TODO: use trash package
+				err = os.Remove(file.Path)
 			}
 
 			if err != nil {

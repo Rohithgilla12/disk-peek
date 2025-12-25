@@ -22,8 +22,8 @@ export function ClearTrendsHistory() {
   return window['go']['main']['App']['ClearTrendsHistory']();
 }
 
-export function DeleteDuplicateGroup(arg1) {
-  return window['go']['main']['App']['DeleteDuplicateGroup'](arg1);
+export function DeleteDuplicateGroup(arg1, arg2) {
+  return window['go']['main']['App']['DeleteDuplicateGroup'](arg1, arg2);
 }
 
 export function DeleteNodeModules(arg1) {
