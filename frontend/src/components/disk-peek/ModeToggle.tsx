@@ -1,6 +1,6 @@
-import { Monitor, Zap } from "lucide-react";
+import { Monitor, Zap, Wrench } from "lucide-react";
 
-export type ScanMode = "normal" | "dev";
+export type ScanMode = "normal" | "dev" | "tools";
 
 interface ModeToggleProps {
   mode: ScanMode;
@@ -15,7 +15,7 @@ export function ModeToggle({ mode, onModeChange, disabled }: ModeToggleProps) {
         onClick={() => onModeChange("normal")}
         disabled={disabled}
         className={`
-          relative flex items-center gap-2.5 px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-semibold
+          relative flex items-center gap-2.5 px-4 py-2.5 rounded-[var(--radius-lg)] text-sm font-semibold
           transition-all duration-300 ease-out
           ${
             mode === "normal"
@@ -36,7 +36,7 @@ export function ModeToggle({ mode, onModeChange, disabled }: ModeToggleProps) {
         onClick={() => onModeChange("dev")}
         disabled={disabled}
         className={`
-          relative flex items-center gap-2.5 px-5 py-2.5 rounded-[var(--radius-lg)] text-sm font-semibold
+          relative flex items-center gap-2.5 px-4 py-2.5 rounded-[var(--radius-lg)] text-sm font-semibold
           transition-all duration-300 ease-out
           ${
             mode === "dev"
@@ -49,6 +49,27 @@ export function ModeToggle({ mode, onModeChange, disabled }: ModeToggleProps) {
         <Zap size={17} strokeWidth={mode === "dev" ? 2.5 : 2} />
         <span>Dev Clean</span>
         {mode === "dev" && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-white shadow-sm" />
+        )}
+      </button>
+
+      <button
+        onClick={() => onModeChange("tools")}
+        disabled={disabled}
+        className={`
+          relative flex items-center gap-2.5 px-4 py-2.5 rounded-[var(--radius-lg)] text-sm font-semibold
+          transition-all duration-300 ease-out
+          ${
+            mode === "tools"
+              ? "bg-gradient-to-r from-[var(--color-warning)] to-[var(--color-warning)]/80 text-white shadow-[var(--shadow-sm)]"
+              : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"
+          }
+          ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
+        `}
+      >
+        <Wrench size={17} strokeWidth={mode === "tools" ? 2.5 : 2} />
+        <span>Tools</span>
+        {mode === "tools" && (
           <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-white shadow-sm" />
         )}
       </button>

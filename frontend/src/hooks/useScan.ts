@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ScanDev, QuickScanDev, ScanNormal } from "../../wailsjs/go/main/App";
+import { ScanDev, QuickScanDev, ScanNormal, CancelScan, RecordDiskSnapshot } from "../../wailsjs/go/main/App";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
 import type { scanner } from "../../wailsjs/go/models";
 import type { ScanMode } from "../components/disk-peek/ModeToggle";
@@ -11,7 +11,7 @@ interface ScanProgress {
   bytesScanned: number;
 }
 
-type ScanState = "idle" | "scanning" | "completed" | "error";
+type ScanState = "idle" | "scanning" | "completed" | "error" | "cancelled";
 
 // Union type for scan results
 type ScanResultUnion = scanner.ScanResult | scanner.FullScanResult;
@@ -20,6 +20,7 @@ type ScanResultUnion = scanner.ScanResult | scanner.FullScanResult;
 interface ScanCache {
   dev: { state: ScanState; result: ScanResultUnion | null } | null;
   normal: { state: ScanState; result: ScanResultUnion | null } | null;
+  tools: { state: ScanState; result: ScanResultUnion | null } | null;
 }
 
 interface UseScanReturn {
@@ -29,6 +30,7 @@ interface UseScanReturn {
   error: string | null;
   scan: () => Promise<void>;
   quickScan: () => Promise<void>;
+  cancel: () => void;
   reset: () => void;
 }
 
@@ -36,6 +38,7 @@ interface UseScanReturn {
 const scanCache: ScanCache = {
   dev: null,
   normal: null,
+  tools: null,
 };
 
 export function useScan(mode: ScanMode): UseScanReturn {
@@ -84,11 +87,18 @@ export function useScan(mode: ScanMode): UseScanReturn {
       }
     );
 
+    // Scan cancelled
+    const unsubscribeCancelled = EventsOn("scan:cancelled", () => {
+      setState("cancelled");
+      setProgress({ current: 0, total: 0, currentPath: "", bytesScanned: 0 });
+    });
+
     return () => {
       unsubscribeProgress();
       unsubscribeStarted();
       unsubscribeCompleted();
       unsubscribeCompletedNormal();
+      unsubscribeCancelled();
     };
   }, []);
 
@@ -124,6 +134,8 @@ export function useScan(mode: ScanMode): UseScanReturn {
       let scanResult: ScanResultUnion;
       if (mode === "dev") {
         scanResult = await ScanDev();
+        // Record snapshot for trends tracking (only for dev scans which have category data)
+        RecordDiskSnapshot(scanResult as scanner.ScanResult).catch(console.error);
       } else {
         scanResult = await ScanNormal();
       }
@@ -146,6 +158,8 @@ export function useScan(mode: ScanMode): UseScanReturn {
       let scanResult: ScanResultUnion;
       if (mode === "dev") {
         scanResult = await QuickScanDev();
+        // Record snapshot for trends tracking (only for dev scans which have category data)
+        RecordDiskSnapshot(scanResult as scanner.ScanResult).catch(console.error);
       } else {
         // Normal mode uses the same scan for both
         scanResult = await ScanNormal();
@@ -160,6 +174,12 @@ export function useScan(mode: ScanMode): UseScanReturn {
       setState("error");
     }
   }, [mode]);
+
+  const cancel = useCallback(() => {
+    CancelScan();
+    setState("idle");
+    setProgress({ current: 0, total: 0, currentPath: "", bytesScanned: 0 });
+  }, []);
 
   const reset = useCallback(() => {
     setState("idle");
@@ -177,6 +197,7 @@ export function useScan(mode: ScanMode): UseScanReturn {
     error,
     scan,
     quickScan,
+    cancel,
     reset,
   };
 }

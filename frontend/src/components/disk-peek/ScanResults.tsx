@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { StackedBar } from "./StackedBar";
 import { CategoryCard } from "./CategoryCard";
@@ -15,9 +15,10 @@ interface BreadcrumbItem {
 interface ScanResultsProps {
   result: scanner.ScanResult;
   onClean?: (categoryIds: string[]) => void;
+  onSelectionChange?: (categoryIds: string[]) => void;
 }
 
-export function ScanResults({ result, onClean }: ScanResultsProps) {
+export function ScanResults({ result, onClean, onSelectionChange }: ScanResultsProps) {
   const [navigationStack, setNavigationStack] = useState<BreadcrumbItem[]>([
     { id: "root", name: "All Categories", categories: result.categories },
   ]);
@@ -36,6 +37,14 @@ export function ScanResults({ result, onClean }: ScanResultsProps) {
   const sortedCategories = useMemo(() => {
     return [...currentLevel.categories].sort((a, b) => b.size - a.size);
   }, [currentLevel.categories]);
+
+  // Notify parent of current selection for keyboard shortcuts
+  useEffect(() => {
+    if (onSelectionChange) {
+      const categoryIds = sortedCategories.map((c) => c.id);
+      onSelectionChange(categoryIds);
+    }
+  }, [sortedCategories, onSelectionChange]);
 
   const handleCategoryClick = (category: scanner.Category) => {
     if (category.children && category.children.length > 0) {

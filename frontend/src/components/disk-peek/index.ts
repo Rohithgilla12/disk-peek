@@ -10,3 +10,8 @@ export { ScanResults } from "./ScanResults";
 export { FileTreeResults } from "./FileTreeResults";
 export { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 export { CleanCompletedDialog } from "./CleanCompletedDialog";
+export { SettingsPanel } from "./SettingsPanel";
+export { LargeFilesView } from "./LargeFilesView";
+export { DuplicatesView } from "./DuplicatesView";
+export { TrendsView } from "./TrendsView";
+export { ToolsPanel } from "./ToolsPanel";

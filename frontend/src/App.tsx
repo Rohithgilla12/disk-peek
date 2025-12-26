@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import "@/index.css";
 import {
   ModeToggle,
@@ -8,25 +8,33 @@ import {
   ScanResults,
   FileTreeResults,
   CleanCompletedDialog,
+  SettingsPanel,
+  ToolsPanel,
   type ScanMode,
 } from "@/components/disk-peek";
 import type { scanner } from "../wailsjs/go/models";
 import { useScan } from "@/hooks/useScan";
 import { useClean } from "@/hooks/useClean";
-import { RefreshCw, Clock, HardDrive, Sparkles } from "lucide-react";
+import { useMenuEvents } from "@/hooks/useMenuEvents";
+import { RefreshCw, Clock, HardDrive, Sparkles, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function App() {
   const [mode, setMode] = useState<ScanMode>("dev");
-  const { state: scanState, result, progress: scanProgress, error: scanError, scan, reset: resetScan } = useScan(mode);
-  const { 
-    state: cleanState, 
-    result: cleanResult, 
-    progress: cleanProgress, 
-    error: cleanError, 
-    clean, 
-    reset: resetClean 
+  const [showSettings, setShowSettings] = useState(false);
+  const { state: scanState, result, progress: scanProgress, error: scanError, scan, quickScan, cancel: cancelScan, reset: resetScan } = useScan(mode);
+  const {
+    state: cleanState,
+    result: cleanResult,
+    progress: cleanProgress,
+    error: cleanError,
+    clean,
+    cancel: cancelClean,
+    reset: resetClean
   } = useClean();
+
+  // Ref to ScanResults for programmatic clean trigger
+  const selectedCategoriesRef = useRef<string[]>([]);
 
   // Combined state for UI
   const isScanning = scanState === "scanning";
@@ -34,12 +42,12 @@ function App() {
   const isCleanCompleted = cleanState === "completed";
   const isBusy = isScanning || isCleaning;
 
-  const handleModeChange = (newMode: ScanMode) => {
+  const handleModeChange = useCallback((newMode: ScanMode) => {
     if (isBusy) return;
     setMode(newMode);
     resetScan();
     resetClean();
-  };
+  }, [isBusy, resetScan, resetClean]);
 
   const handleClean = async (categoryIds: string[]) => {
     await clean(categoryIds);
@@ -55,6 +63,46 @@ function App() {
     resetClean();
     scan();
   };
+
+  // Track selected categories from ScanResults
+  const handleSelectionChange = useCallback((categoryIds: string[]) => {
+    selectedCategoriesRef.current = categoryIds;
+  }, []);
+
+  // Cancel any running operation
+  const handleCancel = useCallback(() => {
+    if (isScanning) {
+      cancelScan();
+    } else if (isCleaning) {
+      cancelClean();
+    }
+  }, [isScanning, isCleaning, cancelScan, cancelClean]);
+
+  // Menu event handlers
+  useMenuEvents({
+    onScan: () => {
+      if (!isBusy) {
+        scan();
+      }
+    },
+    onQuickScan: () => {
+      if (!isBusy) {
+        quickScan();
+      }
+    },
+    onClean: () => {
+      if (!isBusy && scanState === "completed" && selectedCategoriesRef.current.length > 0) {
+        handleClean(selectedCategoriesRef.current);
+      }
+    },
+    onSettings: () => {
+      if (!isBusy) {
+        setShowSettings(true);
+      }
+    },
+    onModeChange: handleModeChange,
+    onCancel: handleCancel,
+  });
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)] noise-overlay">
@@ -77,7 +125,7 @@ function App() {
                 Disk Peek
               </h1>
               <p className="text-xs text-[var(--color-text-muted)]">
-                {mode === "dev" ? "Clean up dev clutter" : "Explore your storage"}
+                {mode === "dev" ? "Clean up dev clutter" : mode === "tools" ? "Advanced analysis tools" : "Explore your storage"}
               </p>
             </div>
           </div>
@@ -90,7 +138,7 @@ function App() {
           />
 
           {/* Actions */}
-          <div className="flex items-center gap-3 min-w-[160px] justify-end">
+          <div className="flex items-center gap-3 min-w-[200px] justify-end">
             {scanState === "completed" && !isCleaning && !isCleanCompleted && (
               <>
                 <Button
@@ -110,6 +158,16 @@ function App() {
                 )}
               </>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowSettings(true)}
+              disabled={isBusy}
+              className="w-9 h-9 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)]"
+              title="Settings"
+            >
+              <Settings size={18} className="text-[var(--color-text-muted)]" />
+            </Button>
           </div>
         </div>
       </header>
@@ -129,7 +187,7 @@ function App() {
         )}
 
         {/* Content based on state */}
-        {scanState === "idle" && !isCleaning && !isCleanCompleted && (
+        {scanState === "idle" && !isCleaning && !isCleanCompleted && mode !== "tools" && (
           <EmptyState mode={mode} onScan={scan} isScanning={false} />
         )}
 
@@ -139,6 +197,7 @@ function App() {
             total={scanProgress.total}
             currentPath={scanProgress.currentPath}
             bytesScanned={scanProgress.bytesScanned}
+            onCancel={cancelScan}
           />
         )}
 
@@ -149,15 +208,24 @@ function App() {
             currentPath={cleanProgress.currentPath}
             bytesFreed={cleanProgress.bytesFreed}
             currentItem={cleanProgress.currentItem}
+            onCancel={cancelClean}
           />
         )}
 
-        {scanState === "completed" && result && !isCleaning && (
+        {scanState === "completed" && result && !isCleaning && mode !== "tools" && (
           mode === "dev" ? (
-            <ScanResults result={result as scanner.ScanResult} onClean={handleClean} />
+            <ScanResults
+              result={result as scanner.ScanResult}
+              onClean={handleClean}
+              onSelectionChange={handleSelectionChange}
+            />
           ) : (
             <FileTreeResults result={result as scanner.FullScanResult} />
           )
+        )}
+
+        {mode === "tools" && !isCleaning && !isCleanCompleted && (
+          <ToolsPanel />
         )}
 
         {/* Clean completed dialog - shows over the scan results */}
@@ -193,7 +261,9 @@ function App() {
                     ? "Cleaning complete!"
                     : mode === "dev"
                       ? "Ready to clean dev caches"
-                      : "Ready to explore"
+                      : mode === "tools"
+                        ? "Analysis tools ready"
+                        : "Ready to explore"
               }
             </span>
           </div>
@@ -202,6 +272,9 @@ function App() {
           </span>
         </div>
       </footer>
+
+      {/* Settings Panel */}
+      <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -431,4 +432,64 @@ func formatFloat(f float64) string {
 		return fmt.Sprintf("%.1f", f)
 	}
 	return fmt.Sprintf("%.2f", f)
+}
+
+// ScanMultiplePathsWithContext scans paths with context support for cancellation
+func ScanMultiplePathsWithContext(ctx context.Context, paths []string, workers int, callback ProgressCallback) []WalkResult {
+	if workers <= 0 {
+		workers = 4
+	}
+
+	results := make([]WalkResult, len(paths))
+	jobs := make(chan int, len(paths))
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	completed := 0
+	cancelled := false
+
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range jobs {
+				// Check for cancellation
+				if IsCancelled(ctx) {
+					mu.Lock()
+					cancelled = true
+					mu.Unlock()
+					continue
+				}
+
+				results[i] = WalkDirectory(paths[i])
+
+				if callback != nil {
+					mu.Lock()
+					if !cancelled {
+						completed++
+						callback(ScanProgress{
+							Current:      completed,
+							Total:        len(paths),
+							CurrentPath:  paths[i],
+							BytesScanned: results[i].Size,
+						})
+					}
+					mu.Unlock()
+				}
+			}
+		}()
+	}
+
+	// Send jobs, checking for cancellation
+	for i := range paths {
+		if IsCancelled(ctx) {
+			break
+		}
+		jobs <- i
+	}
+	close(jobs)
+
+	wg.Wait()
+
+	return results
 }

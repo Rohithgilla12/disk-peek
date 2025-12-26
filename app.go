@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"os"
-	"os/exec"
-	"strings"
 
+	"disk-peek/internal/cache"
 	"disk-peek/internal/scanner"
+	"disk-peek/internal/settings"
+	"disk-peek/internal/trash"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -16,6 +17,8 @@ type App struct {
 	ctx           context.Context
 	devScanner    *scanner.DevScanner
 	normalScanner *scanner.NormalScanner
+	scanCancel    context.CancelFunc
+	cleanCancel   context.CancelFunc
 }
 
 // NewApp creates a new App application struct
@@ -31,19 +34,57 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+// CancelScan cancels any running scan operation
+func (a *App) CancelScan() {
+	if a.scanCancel != nil {
+		a.scanCancel()
+		a.scanCancel = nil
+	}
+	a.devScanner.Cancel()
+	a.normalScanner.Cancel()
+	runtime.EventsEmit(a.ctx, "scan:cancelled", nil)
+}
+
+// CancelClean cancels any running clean operation
+func (a *App) CancelClean() {
+	if a.cleanCancel != nil {
+		a.cleanCancel()
+		a.cleanCancel = nil
+	}
+	runtime.EventsEmit(a.ctx, "clean:cancelled", nil)
+}
+
 // --- Dev Mode Methods ---
 
 // ScanDev performs a full Dev Mode scan of all categories
 func (a *App) ScanDev() scanner.ScanResult {
-	// Set up progress callback to emit events
+	// Cancel any existing scan
+	if a.scanCancel != nil {
+		a.scanCancel()
+	}
+
+	// Create new context for this scan
+	ctx, cancel := context.WithCancel(context.Background())
+	a.scanCancel = cancel
+
+	// Set up context and progress callback
+	a.devScanner.SetContext(ctx)
 	a.devScanner.SetProgressCallback(func(progress scanner.ScanProgress) {
 		runtime.EventsEmit(a.ctx, "scan:progress", progress)
 	})
 
 	runtime.EventsEmit(a.ctx, "scan:started", nil)
 	result := a.devScanner.Scan()
-	runtime.EventsEmit(a.ctx, "scan:completed", result)
 
+	// Check if cancelled
+	if a.devScanner.IsCancelled() {
+		return result
+	}
+
+	// Save to cache
+	_ = cache.SaveDevScan(result)
+
+	runtime.EventsEmit(a.ctx, "scan:completed", result)
 	return result
 }
 
@@ -51,6 +92,8 @@ func (a *App) ScanDev() scanner.ScanResult {
 func (a *App) QuickScanDev() scanner.ScanResult {
 	runtime.EventsEmit(a.ctx, "scan:started", nil)
 	result := a.devScanner.QuickScan()
+	// Save to cache
+	_ = cache.SaveDevScan(result)
 	runtime.EventsEmit(a.ctx, "scan:completed", result)
 	return result
 }
@@ -74,26 +117,66 @@ func (a *App) GetCategoryItems(categoryID string) ([]scanner.FileNode, error) {
 
 // ScanNormal performs a full Normal Mode scan starting from home directory
 func (a *App) ScanNormal() scanner.FullScanResult {
-	// Set up progress callback to emit events
+	// Cancel any existing scan
+	if a.scanCancel != nil {
+		a.scanCancel()
+	}
+
+	// Create new context for this scan
+	ctx, cancel := context.WithCancel(context.Background())
+	a.scanCancel = cancel
+
+	// Set up context and progress callback
+	a.normalScanner.SetContext(ctx)
 	a.normalScanner.SetProgressCallback(func(progress scanner.ScanProgress) {
 		runtime.EventsEmit(a.ctx, "scan:progress", progress)
 	})
 
+	home, _ := os.UserHomeDir()
+
 	runtime.EventsEmit(a.ctx, "scan:started", nil)
 	result := a.normalScanner.Scan()
-	runtime.EventsEmit(a.ctx, "scan:completed:normal", result)
 
+	// Check if cancelled
+	if a.normalScanner.IsCancelled() {
+		return result
+	}
+
+	// Save to cache
+	_ = cache.SaveNormalScan(result, home)
+
+	runtime.EventsEmit(a.ctx, "scan:completed:normal", result)
 	return result
 }
 
 // ScanNormalPath performs a Normal Mode scan starting from a specific path
 func (a *App) ScanNormalPath(path string) scanner.FullScanResult {
+	// Cancel any existing scan
+	if a.scanCancel != nil {
+		a.scanCancel()
+	}
+
+	// Create new context for this scan
+	ctx, cancel := context.WithCancel(context.Background())
+	a.scanCancel = cancel
+
+	// Set up context and progress callback
+	a.normalScanner.SetContext(ctx)
 	a.normalScanner.SetProgressCallback(func(progress scanner.ScanProgress) {
 		runtime.EventsEmit(a.ctx, "scan:progress", progress)
 	})
 
 	runtime.EventsEmit(a.ctx, "scan:started", nil)
 	result := a.normalScanner.ScanPath(path)
+
+	// Check if cancelled
+	if a.normalScanner.IsCancelled() {
+		return result
+	}
+
+	// Save to cache
+	_ = cache.SaveNormalScan(result, path)
+
 	runtime.EventsEmit(a.ctx, "scan:completed:normal", result)
 
 	return result
@@ -127,9 +210,10 @@ func (a *App) DeletePaths(paths []string, permanent bool) scanner.CleanResult {
 	runtime.EventsEmit(a.ctx, "clean:started", nil)
 
 	result := scanner.CleanResult{
-		FreedBytes:   0,
-		DeletedPaths: []string{},
-		Errors:       []string{},
+		FreedBytes:     0,
+		DeletedPaths:   []string{},
+		Errors:         []string{},
+		DetailedErrors: []scanner.CleanError{},
 	}
 
 	total := len(paths)
@@ -161,7 +245,14 @@ func (a *App) DeletePaths(paths []string, permanent bool) scanner.CleanResult {
 		}
 
 		if err != nil {
-			result.Errors = append(result.Errors, err.Error())
+			errorCode := getErrorCode(err)
+			errorMsg := getErrorMessage(err, path)
+			result.Errors = append(result.Errors, errorMsg)
+			result.DetailedErrors = append(result.DetailedErrors, scanner.CleanError{
+				Path:    path,
+				Message: errorMsg,
+				Code:    errorCode,
+			})
 			continue
 		}
 
@@ -173,18 +264,49 @@ func (a *App) DeletePaths(paths []string, permanent bool) scanner.CleanResult {
 	return result
 }
 
+// getErrorCode returns a code for the error type
+func getErrorCode(err error) string {
+	if os.IsPermission(err) {
+		return "PERMISSION_DENIED"
+	}
+	if os.IsNotExist(err) {
+		return "NOT_FOUND"
+	}
+	if os.IsExist(err) {
+		return "ALREADY_EXISTS"
+	}
+	return "UNKNOWN"
+}
+
+// getErrorMessage returns a user-friendly error message
+func getErrorMessage(err error, path string) string {
+	if os.IsPermission(err) {
+		return "Permission denied: " + truncatePath(path) + ". Try running with elevated permissions."
+	}
+	if os.IsNotExist(err) {
+		return "File not found: " + truncatePath(path)
+	}
+	// Default to original error message
+	return err.Error()
+}
+
 // DeletePath deletes a single path - convenience wrapper for DeletePaths
 func (a *App) DeletePath(path string, permanent bool) scanner.CleanResult {
 	return a.DeletePaths([]string{path}, permanent)
 }
 
-// CleanCategories cleans the specified category IDs (always moves to trash)
+// CleanCategories cleans the specified category IDs
+// Uses permanent delete setting from user preferences
 func (a *App) CleanCategories(categoryIDs []string) scanner.CleanResult {
 	// Get all categories and collect paths for the specified IDs
 	categories := scanner.GetCategories()
 	var pathsToClean []string
 
 	for _, id := range categoryIDs {
+		// Skip disabled categories
+		if !settings.IsCategoryEnabled(id) {
+			continue
+		}
 		cat := scanner.GetCategoryByID(categories, id)
 		if cat == nil {
 			continue
@@ -193,8 +315,9 @@ func (a *App) CleanCategories(categoryIDs []string) scanner.CleanResult {
 		collectPathsFromCategory(cat, &pathsToClean, nil)
 	}
 
-	// Remove duplicates and delete (move to trash)
-	return a.DeletePaths(uniquePaths(pathsToClean), false)
+	// Remove duplicates and delete using user's preference
+	permanent := settings.GetPermanentDelete()
+	return a.DeletePaths(uniquePaths(pathsToClean), permanent)
 }
 
 // collectPathsFromCategory recursively collects all paths from a category
@@ -269,26 +392,270 @@ func joinPath(parts []string) string {
 	return result
 }
 
-// moveToTrash moves a file/directory to the system trash
+// moveToTrash moves a file/directory to the system trash (cross-platform)
 func moveToTrash(path string) error {
-	// Check if path exists
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil // Already doesn't exist, consider it success
+	return trash.MoveToTrash(path)
+}
+
+// --- Settings Methods ---
+
+// GetSettings returns the current settings
+func (a *App) GetSettings() *settings.Settings {
+	s, _ := settings.Load()
+	return s
+}
+
+// SaveSettings saves the settings
+func (a *App) SaveSettings(s *settings.Settings) error {
+	return settings.Save(s)
+}
+
+// SetPermanentDelete sets the permanent delete preference
+func (a *App) SetPermanentDelete(permanent bool) error {
+	return settings.SetPermanentDelete(permanent)
+}
+
+// GetPermanentDelete returns whether permanent delete is enabled
+func (a *App) GetPermanentDelete() bool {
+	return settings.GetPermanentDelete()
+}
+
+// SetCategoryEnabled enables or disables a category
+func (a *App) SetCategoryEnabled(categoryID string, enabled bool) error {
+	return settings.SetCategoryEnabled(categoryID, enabled)
+}
+
+// IsCategoryEnabled returns whether a category is enabled
+func (a *App) IsCategoryEnabled(categoryID string) bool {
+	return settings.IsCategoryEnabled(categoryID)
+}
+
+// --- Node Modules Scanner Methods ---
+
+// ScanNodeModules finds all node_modules directories across projects
+func (a *App) ScanNodeModules() scanner.NodeModulesResult {
+	runtime.EventsEmit(a.ctx, "nodemodules:started", nil)
+
+	result := scanner.FindNodeModules(func(current int, path string) {
+		runtime.EventsEmit(a.ctx, "nodemodules:progress", map[string]interface{}{
+			"current": current,
+			"path":    path,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "nodemodules:completed", result)
+	return result
+}
+
+// DeleteNodeModules deletes the specified node_modules directories
+func (a *App) DeleteNodeModules(paths []string) scanner.CleanResult {
+	runtime.EventsEmit(a.ctx, "nodemodules:clean:started", nil)
+
+	permanent := settings.GetPermanentDelete()
+	result := scanner.CleanResult{
+		FreedBytes:     0,
+		DeletedPaths:   []string{},
+		Errors:         []string{},
+		DetailedErrors: []scanner.CleanError{},
 	}
 
-	// Escape backslashes and double quotes for AppleScript string
-	escapedPath := strings.ReplaceAll(path, `\`, `\\`)
-	escapedPath = strings.ReplaceAll(escapedPath, `"`, `\"`)
+	total := len(paths)
+	for i, path := range paths {
+		// Get size before deletion (use 4 workers for speed)
+		walkResult := scanner.WalkDirectoryFast(path, 4)
+		size := walkResult.Size
 
-	// Use macOS trash command via osascript for proper Trash behavior
-	// This preserves the "Put Back" functionality
-	cmd := exec.Command("osascript", "-e",
-		`tell application "Finder" to delete POSIX file "`+escapedPath+`"`)
-	output, err := cmd.CombinedOutput()
+		progress := scanner.CleanProgress{
+			Current:     i + 1,
+			Total:       total,
+			CurrentPath: path,
+			BytesFreed:  result.FreedBytes,
+			CurrentItem: truncatePath(path),
+		}
+		runtime.EventsEmit(a.ctx, "nodemodules:clean:progress", progress)
+
+		// Check if path exists
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			continue
+		}
+
+		var err error
+		if permanent {
+			err = os.RemoveAll(path)
+		} else {
+			err = moveToTrash(path)
+		}
+
+		if err != nil {
+			errorCode := getErrorCode(err)
+			errorMsg := getErrorMessage(err, path)
+			result.Errors = append(result.Errors, errorMsg)
+			result.DetailedErrors = append(result.DetailedErrors, scanner.CleanError{
+				Path:    path,
+				Message: errorMsg,
+				Code:    errorCode,
+			})
+			continue
+		}
+
+		result.FreedBytes += size
+		result.DeletedPaths = append(result.DeletedPaths, path)
+	}
+
+	runtime.EventsEmit(a.ctx, "nodemodules:clean:completed", result)
+	return result
+}
+
+// --- Cache Methods ---
+
+// GetCacheInfo returns information about cached scan results
+func (a *App) GetCacheInfo() cache.CacheInfo {
+	return cache.GetCacheInfo()
+}
+
+// LoadCachedDevScan loads a cached dev scan result if available
+func (a *App) LoadCachedDevScan() *cache.CachedDevScan {
+	return cache.LoadDevScan()
+}
+
+// LoadCachedNormalScan loads a cached normal scan result if available
+func (a *App) LoadCachedNormalScan() *cache.CachedNormalScan {
+	return cache.LoadNormalScan()
+}
+
+// ClearCache removes all cached scan results
+func (a *App) ClearCache() error {
+	return cache.ClearCache()
+}
+
+// --- Advanced Features (Phase 4) ---
+
+// FindLargeFiles scans for files larger than the specified size
+func (a *App) FindLargeFiles(minSizeMB int) scanner.LargeFilesResult {
+	runtime.EventsEmit(a.ctx, "largefile:started", nil)
+
+	home, _ := os.UserHomeDir()
+	options := scanner.DefaultLargeFilesOptions()
+	options.MinSize = int64(minSizeMB) * 1024 * 1024
+
+	result := scanner.FindLargeFiles(home, options, func(scanned int, currentPath string) {
+		runtime.EventsEmit(a.ctx, "largefile:progress", map[string]interface{}{
+			"scanned": scanned,
+			"current": currentPath,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "largefile:completed", result)
+	return result
+}
+
+// FindLargeFilesWithOptions scans for large files with custom options
+func (a *App) FindLargeFilesWithOptions(rootPath string, minSizeMB int, maxResults int, fileTypes []string) scanner.LargeFilesResult {
+	runtime.EventsEmit(a.ctx, "largefile:started", nil)
+
+	if rootPath == "" {
+		rootPath, _ = os.UserHomeDir()
+	}
+
+	options := scanner.DefaultLargeFilesOptions()
+	options.MinSize = int64(minSizeMB) * 1024 * 1024
+	options.MaxResults = maxResults
+	if len(fileTypes) > 0 {
+		options.FileTypes = fileTypes
+	}
+
+	result := scanner.FindLargeFiles(rootPath, options, func(scanned int, currentPath string) {
+		runtime.EventsEmit(a.ctx, "largefile:progress", map[string]interface{}{
+			"scanned": scanned,
+			"current": currentPath,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "largefile:completed", result)
+	return result
+}
+
+// FindDuplicates scans for duplicate files
+func (a *App) FindDuplicates() scanner.DuplicatesResult {
+	runtime.EventsEmit(a.ctx, "duplicates:started", nil)
+
+	home, _ := os.UserHomeDir()
+	options := scanner.DefaultDuplicatesOptions()
+
+	result := scanner.FindDuplicates(home, options, func(phase string, current int, total int) {
+		runtime.EventsEmit(a.ctx, "duplicates:progress", map[string]interface{}{
+			"phase":   phase,
+			"current": current,
+			"total":   total,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "duplicates:completed", result)
+	return result
+}
+
+// FindDuplicatesInPath scans for duplicate files in a specific path
+func (a *App) FindDuplicatesInPath(rootPath string, minSizeKB int) scanner.DuplicatesResult {
+	runtime.EventsEmit(a.ctx, "duplicates:started", nil)
+
+	if rootPath == "" {
+		rootPath, _ = os.UserHomeDir()
+	}
+
+	options := scanner.DefaultDuplicatesOptions()
+	options.MinSize = int64(minSizeKB) * 1024
+
+	result := scanner.FindDuplicates(rootPath, options, func(phase string, current int, total int) {
+		runtime.EventsEmit(a.ctx, "duplicates:progress", map[string]interface{}{
+			"phase":   phase,
+			"current": current,
+			"total":   total,
+		})
+	})
+
+	runtime.EventsEmit(a.ctx, "duplicates:completed", result)
+	return result
+}
+
+// DeleteDuplicateGroup deletes duplicates from a group, keeping the file at keepIndex
+func (a *App) DeleteDuplicateGroup(group scanner.DuplicateGroup, keepIndex int) scanner.CleanResult {
+	permanent := settings.GetPermanentDelete()
+	return scanner.DeleteDuplicates([]scanner.DuplicateGroup{group}, keepIndex, permanent, trash.MoveToTrash)
+}
+
+// GetDiskTrends returns disk usage trends
+func (a *App) GetDiskTrends() scanner.TrendsResult {
+	tm, err := scanner.NewTrendsManager()
 	if err != nil {
-		// Fallback: try direct removal if Finder fails
-		return os.RemoveAll(path)
+		return scanner.TrendsResult{}
 	}
-	_ = output
-	return nil
+	return tm.GetTrends(scanner.GetCategories())
+}
+
+// RecordDiskSnapshot records the current scan result for trend tracking
+func (a *App) RecordDiskSnapshot(result scanner.ScanResult) error {
+	tm, err := scanner.NewTrendsManager()
+	if err != nil {
+		return err
+	}
+	return tm.RecordSnapshot(result)
+}
+
+// GetGrowthAlerts returns categories growing faster than the threshold (MB per day)
+func (a *App) GetGrowthAlerts(thresholdMBPerDay int) []scanner.DiskUsageTrend {
+	tm, err := scanner.NewTrendsManager()
+	if err != nil {
+		return nil
+	}
+	thresholdBytes := int64(thresholdMBPerDay) * 1024 * 1024
+	return tm.GetGrowthAlerts(thresholdBytes)
+}
+
+// ClearTrendsHistory clears all disk usage trend history
+func (a *App) ClearTrendsHistory() error {
+	tm, err := scanner.NewTrendsManager()
+	if err != nil {
+		return err
+	}
+	return tm.ClearHistory()
 }

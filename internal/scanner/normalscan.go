@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,6 +15,8 @@ import (
 type NormalScanner struct {
 	workers  int
 	callback ProgressCallback
+	ctx      context.Context
+	cancel   context.CancelFunc
 }
 
 // NewNormalScanner creates a new NormalScanner with the specified number of workers
@@ -29,6 +32,23 @@ func NewNormalScanner(workers int) *NormalScanner {
 // SetProgressCallback sets a callback for progress updates
 func (s *NormalScanner) SetProgressCallback(callback ProgressCallback) {
 	s.callback = callback
+}
+
+// SetContext sets the context for cancellation support
+func (s *NormalScanner) SetContext(ctx context.Context) {
+	s.ctx, s.cancel = context.WithCancel(ctx)
+}
+
+// Cancel cancels the current scan operation
+func (s *NormalScanner) Cancel() {
+	if s.cancel != nil {
+		s.cancel()
+	}
+}
+
+// IsCancelled returns true if the scan was cancelled
+func (s *NormalScanner) IsCancelled() bool {
+	return IsCancelled(s.ctx)
 }
 
 // Scan performs a full scan starting from the user's home directory
@@ -122,6 +142,11 @@ func (s *NormalScanner) buildTree(rootPath string) *FileNode {
 		go func() {
 			defer wg.Done()
 			for i := range jobs {
+				// Check for cancellation
+				if IsCancelled(s.ctx) {
+					continue
+				}
+
 				entry := realEntries[i]
 				childPath := filepath.Join(rootPath, entry.Name())
 
@@ -153,7 +178,7 @@ func (s *NormalScanner) buildTree(rootPath string) *FileNode {
 				results <- childResult{index: i, node: node}
 
 				// Report progress
-				if s.callback != nil {
+				if s.callback != nil && !IsCancelled(s.ctx) {
 					s.callback(ScanProgress{
 						CurrentPath:  childPath,
 						BytesScanned: node.Size,
@@ -163,8 +188,11 @@ func (s *NormalScanner) buildTree(rootPath string) *FileNode {
 		}()
 	}
 
-	// Send jobs
+	// Send jobs, checking for cancellation
 	for i := range realEntries {
+		if IsCancelled(s.ctx) {
+			break
+		}
 		jobs <- i
 	}
 	close(jobs)

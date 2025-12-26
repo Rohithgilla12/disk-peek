@@ -1,6 +1,9 @@
 package scanner
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // ScanMode represents the type of scan
 type ScanMode string
@@ -59,11 +62,19 @@ type ScanProgress struct {
 	BytesScanned int64 `json:"bytesScanned"`
 }
 
+// CleanError represents a detailed error during cleaning
+type CleanError struct {
+	Path    string `json:"path"`
+	Message string `json:"message"`
+	Code    string `json:"code"`
+}
+
 // CleanResult is returned after cleaning operations
 type CleanResult struct {
-	FreedBytes   int64    `json:"freedBytes"`
-	DeletedPaths []string `json:"deletedPaths"`
-	Errors       []string `json:"errors,omitempty"`
+	FreedBytes    int64        `json:"freedBytes"`
+	DeletedPaths  []string     `json:"deletedPaths"`
+	Errors        []string     `json:"errors,omitempty"`
+	DetailedErrors []CleanError `json:"detailedErrors,omitempty"`
 }
 
 // CleanProgress reports cleaning progress to the frontend
@@ -89,3 +100,22 @@ type WalkResult struct {
 
 // ProgressCallback is called during scanning to report progress
 type ProgressCallback func(ScanProgress)
+
+// ScanOptions contains options for scanning operations
+type ScanOptions struct {
+	Ctx      context.Context
+	Callback ProgressCallback
+}
+
+// IsCancelled checks if the context has been cancelled
+func IsCancelled(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
+}

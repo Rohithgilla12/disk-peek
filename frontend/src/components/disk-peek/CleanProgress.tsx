@@ -1,4 +1,5 @@
-import { Loader2, Trash2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Loader2, Trash2, Sparkles, CheckCircle2, X } from "lucide-react";
+import { Button } from "../ui/button";
 
 interface CleanProgressProps {
   current: number;
@@ -6,6 +7,7 @@ interface CleanProgressProps {
   currentPath?: string;
   bytesFreed: number;
   currentItem?: string;
+  onCancel?: () => void;
 }
 
 const cleaningMessages = [
@@ -22,6 +24,7 @@ export function CleanProgress({
   currentPath,
   bytesFreed,
   currentItem,
+  onCancel,
 }: CleanProgressProps) {
   const percentage = total > 0 ? (current / total) * 100 : 0;
   
@@ -130,6 +133,19 @@ export function CleanProgress({
             {currentItem || truncatePath(currentPath || "")}
           </p>
         </div>
+      )}
+
+      {/* Cancel button */}
+      {onCancel && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          className="mt-6 gap-2"
+        >
+          <X size={14} />
+          Cancel Clean
+        </Button>
       )}
     </div>
   );
