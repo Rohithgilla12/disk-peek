@@ -14,7 +14,7 @@ export function ClearCache():Promise<void>;
 
 export function ClearTrendsHistory():Promise<void>;
 
-export function DeleteDuplicateGroup(arg1:scanner.DuplicateGroup, arg2:number):Promise<scanner.CleanResult>;
+export function DeleteDuplicateGroup(arg1:scanner.DuplicateGroup,arg2:number):Promise<scanner.CleanResult>;
 
 export function DeleteNodeModules(arg1:Array<string>):Promise<scanner.CleanResult>;
 

@@ -91,6 +91,17 @@ func FindDuplicates(rootPath string, options DuplicatesOptions, progressCallback
 			return nil
 		}
 
+		// Use Lstat to check for symlinks
+		linfo, lerr := os.Lstat(path)
+		if lerr != nil {
+			return nil
+		}
+
+		// Skip symlinks to avoid infinite loops and double-counting
+		if linfo.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+
 		// Skip directories
 		if info.IsDir() {
 			// Check exclusion patterns for directories
@@ -244,7 +255,7 @@ func FindDuplicates(rootPath string, options DuplicatesOptions, progressCallback
 }
 
 // hashFile calculates the MD5 hash of a file
-// Uses partial hashing for large files (first and last 64KB)
+// Always hashes the full file to avoid false positives that could lead to data loss
 func hashFile(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -252,39 +263,9 @@ func hashFile(path string) (string, error) {
 	}
 	defer file.Close()
 
-	info, err := file.Stat()
-	if err != nil {
-		return "", err
-	}
-
 	hash := md5.New()
-
-	// For small files (< 128KB), hash the entire file
-	if info.Size() < 128*1024 {
-		if _, err := io.Copy(hash, file); err != nil {
-			return "", err
-		}
-	} else {
-		// For large files, hash first 64KB + last 64KB
-		buf := make([]byte, 64*1024)
-
-		// Read first 64KB
-		n, err := file.Read(buf)
-		if err != nil && err != io.EOF {
-			return "", err
-		}
-		hash.Write(buf[:n])
-
-		// Seek to last 64KB
-		if _, err := file.Seek(-64*1024, io.SeekEnd); err != nil {
-			return "", err
-		}
-
-		n, err = file.Read(buf)
-		if err != nil && err != io.EOF {
-			return "", err
-		}
-		hash.Write(buf[:n])
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil

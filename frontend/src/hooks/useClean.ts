@@ -106,14 +106,8 @@ export function useClean(): UseCleanReturn {
 
   const cancel = useCallback(() => {
     CancelClean();
-    setState("idle");
-    setProgress({
-      current: 0,
-      total: 0,
-      currentPath: "",
-      bytesFreed: 0,
-      currentItem: "",
-    });
+    // Don't set state here - let the clean:cancelled event handler do it
+    // to avoid race conditions
   }, []);
 
   const reset = useCallback(() => {

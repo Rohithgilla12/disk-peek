@@ -41,11 +41,12 @@ export function useDuplicates(): UseDuplicatesReturn {
       if (result) {
         const newGroups = result.groups.filter((g) => g.hash !== group.hash);
         const newTotalWasted = newGroups.reduce((sum, g) => sum + g.wastedSize, 0);
+        const newTotalFiles = newGroups.reduce((sum, g) => sum + g.files.length, 0);
         const updatedResult = scanner.DuplicatesResult.createFrom({
           groups: newGroups,
           totalGroups: newGroups.length,
           totalWasted: newTotalWasted,
-          totalFiles: result.totalFiles,
+          totalFiles: newTotalFiles,
           scanDuration: result.scanDuration,
         });
         setResult(updatedResult);

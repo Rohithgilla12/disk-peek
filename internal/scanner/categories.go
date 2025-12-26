@@ -15,7 +15,10 @@ const (
 
 // GetCategories returns all dev cache categories with their paths for the current platform
 func GetCategories() []Category {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return []Category{}
+	}
 
 	var categories []Category
 

@@ -37,9 +37,9 @@ export function useMenuEvents(callbacks: MenuEventCallbacks) {
       callbacksRef.current.onSettings();
     });
 
-    // Mode switch (Cmd+1 or Cmd+2)
+    // Mode switch (Cmd+1, Cmd+2, or Cmd+3)
     const unsubscribeMode = EventsOn("menu:mode", (mode: string) => {
-      if (mode === "dev" || mode === "normal") {
+      if (mode === "dev" || mode === "normal" || mode === "tools") {
         callbacksRef.current.onModeChange(mode as ScanMode);
       }
     });
