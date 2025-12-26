@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ScanDev, QuickScanDev, ScanNormal, CancelScan } from "../../wailsjs/go/main/App";
+import { ScanDev, QuickScanDev, ScanNormal, CancelScan, RecordDiskSnapshot } from "../../wailsjs/go/main/App";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
 import type { scanner } from "../../wailsjs/go/models";
 import type { ScanMode } from "../components/disk-peek/ModeToggle";
@@ -134,6 +134,8 @@ export function useScan(mode: ScanMode): UseScanReturn {
       let scanResult: ScanResultUnion;
       if (mode === "dev") {
         scanResult = await ScanDev();
+        // Record snapshot for trends tracking (only for dev scans which have category data)
+        RecordDiskSnapshot(scanResult as scanner.ScanResult).catch(console.error);
       } else {
         scanResult = await ScanNormal();
       }
@@ -156,6 +158,8 @@ export function useScan(mode: ScanMode): UseScanReturn {
       let scanResult: ScanResultUnion;
       if (mode === "dev") {
         scanResult = await QuickScanDev();
+        // Record snapshot for trends tracking (only for dev scans which have category data)
+        RecordDiskSnapshot(scanResult as scanner.ScanResult).catch(console.error);
       } else {
         // Normal mode uses the same scan for both
         scanResult = await ScanNormal();

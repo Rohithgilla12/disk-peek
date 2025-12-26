@@ -49,7 +49,7 @@ export function TrendsView({ state, result, alerts, error, onLoad, onClearHistor
     );
   }
 
-  if (!result || result.snapshots.length === 0) {
+  if (!result || !result.snapshots || result.snapshots.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <div className="w-20 h-20 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--color-success)]/20 to-[var(--color-success)]/5 flex items-center justify-center mb-6">
