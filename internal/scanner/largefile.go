@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -52,6 +53,12 @@ func DefaultLargeFilesOptions() LargeFilesOptions {
 			"Library/Caches",
 			"node_modules",
 			".git",
+			"Library/Group Containers",
+			"Library/Containers/com.docker.docker",
+			".orbstack",
+			".docker",
+			".lima",
+			".colima",
 		},
 	}
 }
@@ -74,10 +81,21 @@ func FindLargeFiles(rootPath string, options LargeFilesOptions, progressCallback
 			return nil
 		}
 
+		// Use Lstat to get info without following symlinks
+		linfo, lerr := os.Lstat(path)
+		if lerr != nil {
+			return nil
+		}
+
+		// Skip symlinks entirely to avoid double-counting and virtual disk issues
+		if linfo.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+
 		// Skip excluded patterns
 		for _, pattern := range options.ExcludePatterns {
 			if strings.Contains(path, pattern) {
-				if info.IsDir() {
+				if linfo.IsDir() {
 					return filepath.SkipDir
 				}
 				return nil
@@ -85,9 +103,9 @@ func FindLargeFiles(rootPath string, options LargeFilesOptions, progressCallback
 		}
 
 		// Skip hidden files/directories (except root)
-		name := info.Name()
+		name := linfo.Name()
 		if path != rootPath && len(name) > 0 && name[0] == '.' {
-			if info.IsDir() {
+			if linfo.IsDir() {
 				return filepath.SkipDir
 			}
 			return nil
@@ -99,7 +117,7 @@ func FindLargeFiles(rootPath string, options LargeFilesOptions, progressCallback
 		}
 
 		// Check if it's a directory
-		if info.IsDir() {
+		if linfo.IsDir() {
 			if !options.IncludeDirectories {
 				return nil
 			}
@@ -111,7 +129,7 @@ func FindLargeFiles(rootPath string, options LargeFilesOptions, progressCallback
 					Path:    path,
 					Name:    name,
 					Size:    dirSize,
-					ModTime: info.ModTime(),
+					ModTime: linfo.ModTime(),
 					IsDir:   true,
 				})
 				mu.Unlock()
@@ -119,8 +137,17 @@ func FindLargeFiles(rootPath string, options LargeFilesOptions, progressCallback
 			return nil
 		}
 
-		// Check file size
-		if info.Size() < options.MinSize {
+		// Get actual disk usage (handles sparse files correctly)
+		var fileSize int64
+		if stat, ok := linfo.Sys().(*syscall.Stat_t); ok {
+			// Use actual disk blocks instead of logical size
+			fileSize = stat.Blocks * 512
+		} else {
+			fileSize = linfo.Size()
+		}
+
+		// Check file size against threshold
+		if fileSize < options.MinSize {
 			return nil
 		}
 
@@ -143,8 +170,8 @@ func FindLargeFiles(rootPath string, options LargeFilesOptions, progressCallback
 		files = append(files, LargeFile{
 			Path:    path,
 			Name:    name,
-			Size:    info.Size(),
-			ModTime: info.ModTime(),
+			Size:    fileSize,
+			ModTime: linfo.ModTime(),
 			IsDir:   false,
 		})
 		mu.Unlock()
@@ -178,14 +205,29 @@ func FindLargeFiles(rootPath string, options LargeFilesOptions, progressCallback
 }
 
 // calculateDirSize calculates the total size of a directory
+// It skips symlinks and uses actual disk blocks for sparse files
 func calculateDirSize(path string) int64 {
 	var size int64
-	_ = filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
-		if !info.IsDir() {
-			size += info.Size()
+		// Use Lstat to not follow symlinks
+		linfo, lerr := os.Lstat(p)
+		if lerr != nil {
+			return nil
+		}
+		// Skip symlinks
+		if linfo.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+		if !linfo.IsDir() {
+			// Use actual disk blocks for sparse file support
+			if stat, ok := linfo.Sys().(*syscall.Stat_t); ok {
+				size += stat.Blocks * 512
+			} else {
+				size += linfo.Size()
+			}
 		}
 		return nil
 	})
