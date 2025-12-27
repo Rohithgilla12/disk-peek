@@ -108,18 +108,18 @@ function App() {
 
   return (
     <TooltipProvider delayDuration={300}>
-    <div className="h-screen flex flex-col bg-[var(--color-bg)] noise-overlay">
+    <div className="h-screen flex flex-col bg-[var(--color-bg)] gradient-mesh noise-overlay">
       {/* Header */}
-      <header className="flex-shrink-0 px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)]/50">
+      <header className="flex-shrink-0 px-6 py-4 border-b border-[var(--color-border)]/50 glass-subtle">
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-11 h-11 rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-hover)] flex items-center justify-center shadow-[var(--shadow-md)]">
+            <div className="relative group">
+              <div className="w-11 h-11 rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-hover)] flex items-center justify-center shadow-[var(--shadow-md)] group-hover:glow-accent transition-shadow duration-300">
                 <HardDrive size={22} className="text-white" strokeWidth={2} />
               </div>
               {/* Sparkle accent */}
-              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--color-warning)] flex items-center justify-center">
+              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--color-warning)] flex items-center justify-center shadow-sm">
                 <Sparkles size={10} className="text-white" />
               </div>
             </div>
@@ -243,7 +243,7 @@ function App() {
       </main>
 
       {/* Footer */}
-      <footer className="flex-shrink-0 px-6 py-3 border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)]/30">
+      <footer className="flex-shrink-0 px-6 py-3 border-t border-[var(--color-border)]/50 glass-subtle">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
