@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { Button } from "@/components/ui/button";
+import { AnimatedSize } from "@/components/ui/animated-counter";
 import { TrendingUp, TrendingDown, AlertTriangle, BarChart3, Trash2, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { springs } from "@/components/ui/motion";
@@ -153,40 +154,50 @@ export function TrendsView({ state, result, alerts, error, onLoad, onClearHistor
 
       {/* Overall stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        {[
-          {
-            label: "Current Size",
-            value: formatSize(latestSnapshot.totalSize),
-            color: "text-[var(--color-text)]",
-            icon: null,
-          },
-          {
-            label: "Total Change",
-            value: `${isGrowing ? "+" : ""}${formatSize(Math.abs(totalChange))}`,
-            color: isGrowing ? "text-[var(--color-danger)]" : "text-[var(--color-success)]",
-            icon: isGrowing ? <TrendingUp size={18} /> : <TrendingDown size={18} />,
-          },
-          {
-            label: "Avg. Daily Change",
-            value: result.totalTrend ? formatSize(Math.abs(result.totalTrend.growthRate)) + "/day" : "N/A",
-            color: "text-[var(--color-text)]",
-            icon: null,
-          },
-        ].map((stat, index) => (
-          <motion.div
-            key={stat.label}
-            className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...springs.smooth, delay: index * 0.05 }}
-          >
-            <div className="text-xs text-[var(--color-text-muted)] mb-1">{stat.label}</div>
-            <div className={`text-lg font-mono font-bold flex items-center gap-1 ${stat.color}`}>
-              {stat.icon}
-              {stat.value}
-            </div>
-          </motion.div>
-        ))}
+        <motion.div
+          className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springs.smooth, delay: 0 }}
+        >
+          <div className="text-xs text-[var(--color-text-muted)] mb-1">Current Size</div>
+          <div className="text-lg font-mono font-bold text-[var(--color-text)]">
+            <AnimatedSize bytes={latestSnapshot.totalSize} />
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springs.smooth, delay: 0.05 }}
+        >
+          <div className="text-xs text-[var(--color-text-muted)] mb-1">Total Change</div>
+          <div className={`text-lg font-mono font-bold flex items-center gap-1 ${isGrowing ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}`}>
+            {isGrowing ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+            {isGrowing ? "+" : ""}
+            <AnimatedSize bytes={Math.abs(totalChange)} />
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springs.smooth, delay: 0.1 }}
+        >
+          <div className="text-xs text-[var(--color-text-muted)] mb-1">Avg. Daily Change</div>
+          <div className="text-lg font-mono font-bold text-[var(--color-text)]">
+            {result.totalTrend ? (
+              <>
+                <AnimatedSize bytes={Math.abs(result.totalTrend.growthRate)} />
+                <span className="text-[0.85em] opacity-80">/day</span>
+              </>
+            ) : (
+              "N/A"
+            )}
+          </div>
+        </motion.div>
       </div>
 
       {/* Recharts Area Chart */}

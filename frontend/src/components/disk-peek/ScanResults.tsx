@@ -7,6 +7,7 @@ import { CategoryCard } from "./CategoryCard";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ArrowLeft, Trash2, Sparkles, PartyPopper, PieChart, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AnimatedSize } from "@/components/ui/animated-counter";
 import { motion, AnimatePresence } from "framer-motion";
 import { springs } from "@/components/ui/motion";
 
@@ -113,9 +114,10 @@ export function ScanResults({ result, onClean, onSelectionChange }: ScanResultsP
           </div>
           <p className="text-sm text-[var(--color-text-secondary)]">
             Found{" "}
-            <span className="font-mono font-bold text-[var(--color-accent)]">
-              {formatSize(currentTotalSize)}
-            </span>{" "}
+            <AnimatedSize
+              bytes={currentTotalSize}
+              className="font-mono font-bold text-[var(--color-accent)]"
+            />{" "}
             across {sortedCategories.length} {sortedCategories.length === 1 ? "category" : "categories"}
           </p>
         </div>
@@ -276,7 +278,7 @@ export function ScanResults({ result, onClean, onSelectionChange }: ScanResultsP
                   className="w-full h-14 bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-hover)] hover:from-[var(--color-accent-hover)] hover:to-[var(--color-accent)] text-white font-semibold rounded-[var(--radius-xl)] shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-glow)] transition-all duration-300"
                 >
                   <Sparkles size={18} className="mr-2" />
-                  Free up {formatSize(currentTotalSize)}
+                  Free up <AnimatedSize bytes={currentTotalSize} className="mx-1" />
                   <Trash2 size={16} className="ml-2 opacity-70" />
                 </Button>
                 <p className="text-xs text-[var(--color-text-muted)] text-center mt-3 flex items-center justify-center gap-2">
@@ -333,7 +335,7 @@ export function ScanResults({ result, onClean, onSelectionChange }: ScanResultsP
                 className="w-full h-14 bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-hover)] hover:from-[var(--color-accent-hover)] hover:to-[var(--color-accent)] text-white font-semibold rounded-[var(--radius-xl)] shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-glow)] transition-all duration-300"
               >
                 <Sparkles size={18} className="mr-2" />
-                Free up {formatSize(currentTotalSize)}
+                Free up <AnimatedSize bytes={currentTotalSize} className="mx-1" />
                 <Trash2 size={16} className="ml-2 opacity-70" />
               </Button>
               <p className="text-xs text-[var(--color-text-muted)] text-center mt-3 flex items-center justify-center gap-2">
