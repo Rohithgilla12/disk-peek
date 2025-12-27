@@ -2,12 +2,15 @@ import { useState, useMemo, useEffect } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { StackedBar } from "./StackedBar";
 import { DonutChart } from "./DonutChart";
+import { Treemap } from "./Treemap";
 import { CategoryCard } from "./CategoryCard";
 import { Breadcrumbs } from "./Breadcrumbs";
-import { ArrowLeft, Trash2, Sparkles, PartyPopper } from "lucide-react";
+import { ArrowLeft, Trash2, Sparkles, PartyPopper, PieChart, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { springs } from "@/components/ui/motion";
+
+type ChartView = "donut" | "treemap";
 
 interface BreadcrumbItem {
   id: string;
@@ -28,6 +31,7 @@ export function ScanResults({ result, onClean, onSelectionChange }: ScanResultsP
   const [highlightedCategoryId, setHighlightedCategoryId] = useState<
     string | null
   >(null);
+  const [chartView, setChartView] = useState<ChartView>("donut");
 
   const currentLevel = navigationStack[navigationStack.length - 1];
   const isRootLevel = navigationStack.length === 1;
@@ -146,23 +150,78 @@ export function ScanResults({ result, onClean, onSelectionChange }: ScanResultsP
       {/* Main content - Hero layout at root, simple layout when drilling */}
       {isRootLevel ? (
         <div className="flex-1 flex gap-8 min-h-0">
-          {/* Left side: Donut Chart */}
+          {/* Left side: Chart with toggle */}
           <motion.div
-            className="flex-shrink-0 flex flex-col items-center justify-start pt-4"
+            className="flex-shrink-0 flex flex-col items-center justify-start"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ ...springs.smooth, delay: 0.1 }}
           >
-            <DonutChart
-              categories={sortedCategories}
-              totalSize={currentTotalSize}
-              size={260}
-              strokeWidth={28}
-              onCategoryHover={handleCategoryHover}
-              highlightedId={highlightedCategoryId}
-            />
+            {/* Chart View Toggle */}
+            <div className="flex items-center gap-1 mb-4 p-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)]">
+              <button
+                onClick={() => setChartView("donut")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all ${
+                  chartView === "donut"
+                    ? "bg-[var(--color-accent)] text-white"
+                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"
+                }`}
+              >
+                <PieChart size={12} />
+                Donut
+              </button>
+              <button
+                onClick={() => setChartView("treemap")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all ${
+                  chartView === "treemap"
+                    ? "bg-[var(--color-accent)] text-white"
+                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-hover)]"
+                }`}
+              >
+                <LayoutGrid size={12} />
+                Treemap
+              </button>
+            </div>
 
-            {/* Stacked bar below donut */}
+            {/* Chart Content */}
+            <AnimatePresence mode="wait">
+              {chartView === "donut" ? (
+                <motion.div
+                  key="donut"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={springs.snappy}
+                >
+                  <DonutChart
+                    categories={sortedCategories}
+                    totalSize={currentTotalSize}
+                    size={260}
+                    strokeWidth={28}
+                    onCategoryHover={handleCategoryHover}
+                    highlightedId={highlightedCategoryId}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="treemap"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={springs.snappy}
+                  className="w-[280px]"
+                >
+                  <Treemap
+                    categories={sortedCategories}
+                    totalSize={currentTotalSize}
+                    onCategoryClick={handleCategoryClick}
+                    height={280}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Stacked bar below chart */}
             <motion.div
               className="w-full mt-6"
               initial={{ opacity: 0, y: 10 }}
