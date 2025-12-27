@@ -26,7 +26,7 @@
   --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
     Consolas, monospace;
 
-  /* Dark theme colors - Disk Peek palette */
+  /* Dark theme colors - Disk Peek palette (default) */
   --color-bg: #09090b;
   --color-bg-elevated: #18181b;
   --color-bg-hover: #27272a;
@@ -74,6 +74,65 @@
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
+  --color-bg: #fafafa;
+  --color-bg-elevated: #ffffff;
+  --color-bg-hover: #f4f4f5;
+  --color-border: #e4e4e7;
+  --color-border-subtle: #f4f4f5;
+
+  --color-text: #09090b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #71717a;
+
+  /* Slightly adjusted accent for better contrast on light */
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+
+  /* Shadows - lighter for light theme */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-glow: 0 0 20px -5px var(--color-accent);
+}
+
+/* Light theme glass effects */
+[data-theme="light"] .glass {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .glass-subtle {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="light"] .glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Light theme gradient mesh */
+[data-theme="light"] .gradient-mesh {
+  background:
+    radial-gradient(at 40% 20%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(139, 92, 246, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(34, 197, 94, 0.05) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(245, 158, 11, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.06) 0px, transparent 50%);
+}
+
+/* Light theme inner shadow */
+[data-theme="light"] .inner-shadow {
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Reduce noise overlay in light theme */
+[data-theme="light"] .noise-overlay::after {
+  opacity: 0.015;
 }
 
 /* Base styles */

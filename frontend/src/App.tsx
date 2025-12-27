@@ -20,6 +20,8 @@ import { RefreshCw, Clock, HardDrive, Sparkles, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { ThemeProvider } from "@/components/ui/theme-provider";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 function App() {
   const [mode, setMode] = useState<ScanMode>("dev");
@@ -107,6 +109,7 @@ function App() {
   });
 
   return (
+    <ThemeProvider defaultTheme="system">
     <TooltipProvider delayDuration={300}>
     <div className="h-screen flex flex-col bg-[var(--color-bg)] gradient-mesh noise-overlay">
       {/* Header */}
@@ -161,6 +164,7 @@ function App() {
                 )}
               </>
             )}
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"
@@ -280,6 +284,7 @@ function App() {
       <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
     </div>
     </TooltipProvider>
+    </ThemeProvider>
   );
 }
 
