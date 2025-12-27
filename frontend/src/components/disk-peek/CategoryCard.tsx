@@ -1,6 +1,8 @@
 import { ChevronRight } from "lucide-react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { CategoryIcon } from "./CategoryIcon";
+import { motion } from "framer-motion";
+import { springs } from "@/components/ui/motion";
 
 interface CategoryCardProps {
   category: scanner.Category;
@@ -26,28 +28,43 @@ export function CategoryCard({
   const maxPercentage = 100; // For progress bar width calculation
 
   return (
-    <button
+    <motion.button
+      initial={{ opacity: 0, y: 15 }}
+      animate={{
+        opacity: isDimmed ? 0.5 : 1,
+        y: 0,
+        scale: isHighlighted ? 1.01 : 1,
+      }}
+      transition={{
+        ...springs.smooth,
+        delay: index * 0.04
+      }}
+      whileHover={{
+        scale: 1.02,
+        transition: springs.snappy
+      }}
+      whileTap={{
+        scale: 0.98,
+        transition: { duration: 0.1 }
+      }}
       className={`
-        category-card w-full text-left p-4
+        w-full text-left p-4
         bg-[var(--color-bg-elevated)] hover:bg-[var(--color-bg-hover)]
         border border-[var(--color-border)] hover:border-[var(--color-text-muted)]/50
         rounded-[var(--radius-lg)]
-        transition-all duration-200
         group cursor-pointer
-        ${isHighlighted ? "bg-[var(--color-bg-hover)] border-[var(--color-text-muted)]/50 scale-[1.01]" : ""}
-        ${isDimmed ? "opacity-50" : "opacity-100"}
+        ${isHighlighted ? "bg-[var(--color-bg-hover)] border-[var(--color-text-muted)]/50" : ""}
       `}
-      style={{ animationDelay: `${index * 40}ms` }}
       onClick={onClick}
     >
       <div className="flex items-center gap-3">
         {/* Icon with color accent */}
-        <div
-          className={`
-            w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center flex-shrink-0
-            transition-transform duration-200
-            ${isHighlighted ? "scale-110" : "group-hover:scale-105"}
-          `}
+        <motion.div
+          animate={{
+            scale: isHighlighted ? 1.1 : 1
+          }}
+          transition={springs.snappy}
+          className="w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform"
           style={{ backgroundColor: `${category.color}20` }}
         >
           <CategoryIcon
@@ -55,7 +72,7 @@ export function CategoryCard({
             color={category.color}
             size={22}
           />
-        </div>
+        </motion.div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
@@ -64,10 +81,13 @@ export function CategoryCard({
               {category.name}
             </h3>
             {hasChildren && (
-              <ChevronRight
-                size={16}
-                className="text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] group-hover:translate-x-0.5 transition-all flex-shrink-0"
-              />
+              <motion.span
+                initial={{ x: 0 }}
+                whileHover={{ x: 2 }}
+                className="text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] transition-colors flex-shrink-0"
+              >
+                <ChevronRight size={16} />
+              </motion.span>
             )}
           </div>
           {category.description && (
@@ -79,12 +99,16 @@ export function CategoryCard({
           {/* Progress bar inside card */}
           {category.size > 0 && (
             <div className="mt-2 h-1 rounded-full bg-[var(--color-bg)] overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700 ease-out"
-                style={{
-                  width: `${(percentage / maxPercentage) * 100}%`,
-                  backgroundColor: category.color,
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(percentage / maxPercentage) * 100}%` }}
+                transition={{
+                  duration: 0.8,
+                  delay: index * 0.04 + 0.2,
+                  ease: [0.16, 1, 0.3, 1]
                 }}
+                className="h-full rounded-full"
+                style={{ backgroundColor: category.color }}
               />
             </div>
           )}
@@ -92,9 +116,17 @@ export function CategoryCard({
 
         {/* Size */}
         <div className="text-right flex-shrink-0">
-          <div className="font-mono text-sm font-semibold text-[var(--color-text)]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{
+              ...springs.bouncy,
+              delay: index * 0.04 + 0.15
+            }}
+            className="font-mono text-sm font-semibold text-[var(--color-text)]"
+          >
             {formatSize(category.size)}
-          </div>
+          </motion.div>
           {percentage > 0.1 && (
             <div className="text-xs text-[var(--color-text-muted)]">
               {percentage.toFixed(1)}%
@@ -102,7 +134,7 @@ export function CategoryCard({
           )}
         </div>
       </div>
-    </button>
+    </motion.button>
   );
 }
 
