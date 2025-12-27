@@ -8,6 +8,7 @@ import (
 	"disk-peek/internal/scanner"
 	"disk-peek/internal/settings"
 	"disk-peek/internal/trash"
+	"disk-peek/internal/updater"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -188,6 +189,22 @@ func (a *App) GetDirectoryChildren(path string) ([]*scanner.FileNode, error) {
 }
 
 // --- Utility Methods ---
+
+// VersionInfo holds version information about the app
+type VersionInfo struct {
+	Version   string `json:"version"`
+	BuildTime string `json:"buildTime"`
+	GitCommit string `json:"gitCommit"`
+}
+
+// GetVersion returns the app version information
+func (a *App) GetVersion() VersionInfo {
+	return VersionInfo{
+		Version:   Version,
+		BuildTime: BuildTime,
+		GitCommit: GitCommit,
+	}
+}
 
 // GetHomeDir returns the user's home directory
 func (a *App) GetHomeDir() string {
@@ -658,4 +675,28 @@ func (a *App) ClearTrendsHistory() error {
 		return err
 	}
 	return tm.ClearHistory()
+}
+
+// --- Auto Update Methods ---
+
+// CheckForUpdate checks GitHub Releases for a newer version
+func (a *App) CheckForUpdate() (*updater.UpdateInfo, error) {
+	return updater.CheckForUpdate(Version)
+}
+
+// DownloadUpdate downloads the update DMG and returns the path
+func (a *App) DownloadUpdate(downloadURL string) (string, error) {
+	return updater.DownloadUpdate(downloadURL, func(progress updater.DownloadProgress) {
+		runtime.EventsEmit(a.ctx, "update:progress", progress)
+	})
+}
+
+// InstallUpdate opens the downloaded DMG for installation
+func (a *App) InstallUpdate(dmgPath string) error {
+	return updater.InstallUpdate(dmgPath)
+}
+
+// OpenReleasePage opens the GitHub release page in browser
+func (a *App) OpenReleasePage(url string) error {
+	return updater.OpenReleasePage(url)
 }

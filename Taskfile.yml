@@ -1,0 +1,141 @@
+version: "3"
+
+vars:
+  CURRENT_VERSION:
+    sh: git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0"
+  VERSION_NO_V:
+    sh: git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0"
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  version:
+    desc: Show current version
+    cmds:
+      - 'echo "Current version: {{.CURRENT_VERSION}}"'
+
+  bump-patch:
+    desc: Bump patch version (0.1.0 -> 0.1.1)
+    cmds:
+      - task: _bump
+        vars:
+          BUMP_TYPE: patch
+
+  bump-minor:
+    desc: Bump minor version (0.1.0 -> 0.2.0)
+    cmds:
+      - task: _bump
+        vars:
+          BUMP_TYPE: minor
+
+  bump-major:
+    desc: Bump major version (0.1.0 -> 1.0.0)
+    cmds:
+      - task: _bump
+        vars:
+          BUMP_TYPE: major
+
+  _bump:
+    internal: true
+    vars:
+      CURRENT: '{{.VERSION_NO_V}}'
+      MAJOR:
+        sh: echo "{{.VERSION_NO_V}}" | cut -d. -f1
+      MINOR:
+        sh: echo "{{.VERSION_NO_V}}" | cut -d. -f2
+      PATCH:
+        sh: echo "{{.VERSION_NO_V}}" | cut -d. -f3
+    cmds:
+      - |
+        MAJOR={{.MAJOR}}
+        MINOR={{.MINOR}}
+        PATCH={{.PATCH}}
+
+        case "{{.BUMP_TYPE}}" in
+          major)
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            ;;
+          minor)
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            ;;
+          patch)
+            PATCH=$((PATCH + 1))
+            ;;
+        esac
+
+        NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+        echo "Bumping version: {{.CURRENT}} -> ${NEW_VERSION}"
+
+        cd frontend && npm version ${NEW_VERSION} --no-git-tag-version --allow-same-version
+        cd ..
+
+        # Update wails.json productVersion
+        sed -i '' "s/\"productVersion\": \"[^\"]*\"/\"productVersion\": \"${NEW_VERSION}\"/" wails.json
+
+        git add frontend/package.json wails.json
+
+        git commit -m "chore: bump version to v${NEW_VERSION}"
+        git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
+
+        echo ""
+        echo "Version bumped to v${NEW_VERSION}"
+        echo "Run 'task release-push' to push the tag and trigger the release workflow"
+
+  release-push:
+    desc: Push commits and tags to trigger release
+    cmds:
+      - git push
+      - git push --tags
+      - echo "Pushed! GitHub Actions will build and release."
+
+  release:
+    desc: Bump patch version and push (full release)
+    cmds:
+      - task: bump-patch
+      - task: release-push
+
+  release-minor:
+    desc: Bump minor version and push (full release)
+    cmds:
+      - task: bump-minor
+      - task: release-push
+
+  release-major:
+    desc: Bump major version and push (full release)
+    cmds:
+      - task: bump-major
+      - task: release-push
+
+  build:
+    desc: Build the application with version info
+    vars:
+      GIT_VERSION:
+        sh: git describe --tags --abbrev=0 2>/dev/null || echo "dev"
+      GIT_COMMIT:
+        sh: git rev-parse --short HEAD 2>/dev/null || echo "unknown"
+      BUILD_TIME:
+        sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
+    cmds:
+      - wails build -ldflags "-X main.Version={{.GIT_VERSION}} -X main.BuildTime={{.BUILD_TIME}} -X main.GitCommit={{.GIT_COMMIT}}"
+
+  build-dev:
+    desc: Build for development
+    cmds:
+      - wails build -debug
+
+  dev:
+    desc: Run in development mode
+    cmds:
+      - wails dev
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf build/bin
+      - echo "Cleaned build artifacts"

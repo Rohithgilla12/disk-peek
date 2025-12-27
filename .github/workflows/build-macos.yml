@@ -42,7 +42,12 @@ jobs:
           npm install
 
       - name: Build Wails app (${{ matrix.arch }})
-        run: wails build -platform ${{ matrix.platform }} -clean
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          GIT_COMMIT=$(git rev-parse --short HEAD)
+          wails build -platform ${{ matrix.platform }} -clean \
+            -ldflags "-X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT}"
 
       - name: Import Code-Signing Certificates
         uses: Apple-Actions/import-codesign-certs@v3

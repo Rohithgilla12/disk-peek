@@ -9,5 +9,11 @@
   "author": {
     "name": "Rohith Gilla",
     "email": "gillarohith1@gmail.com"
+  },
+  "info": {
+    "productName": "Disk Peek",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright © 2025 Rohith Gilla",
+    "comments": "A modern disk space analyzer"
   }
 }
