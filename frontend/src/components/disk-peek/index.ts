@@ -1,5 +1,6 @@
 export { ModeToggle, type ScanMode } from "./ModeToggle";
 export { StackedBar } from "./StackedBar";
+export { DonutChart } from "./DonutChart";
 export { CategoryCard } from "./CategoryCard";
 export { CategoryIcon } from "./CategoryIcon";
 export { Breadcrumbs } from "./Breadcrumbs";

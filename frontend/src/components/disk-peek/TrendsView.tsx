@@ -1,7 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, AlertTriangle, Loader2, BarChart3, Trash2, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, AlertTriangle, BarChart3, Trash2, RefreshCw } from "lucide-react";
+import { motion } from "framer-motion";
+import { springs } from "@/components/ui/motion";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface TrendsViewProps {
   state: "idle" | "loading" | "completed" | "error";
@@ -72,8 +83,20 @@ export function TrendsView({ state, result, alerts, error, onLoad, onClearHistor
   const totalChange = latestSnapshot.totalSize - oldestSnapshot.totalSize;
   const isGrowing = totalChange > 0;
 
-  // Calculate max size for chart scaling
-  const maxSize = Math.max(...snapshots.map((s) => s.totalSize));
+  // Transform snapshots for Recharts
+  const chartData = useMemo(() => {
+    return snapshots.map((snapshot) => ({
+      date: formatDate(snapshot.timestamp),
+      fullDate: new Date(snapshot.timestamp).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+      size: snapshot.totalSize,
+      formattedSize: formatSize(snapshot.totalSize),
+    }));
+  }, [snapshots]);
 
   return (
     <div className="flex flex-col h-full">
@@ -130,89 +153,150 @@ export function TrendsView({ state, result, alerts, error, onLoad, onClearHistor
 
       {/* Overall stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4">
-          <div className="text-xs text-[var(--color-text-muted)] mb-1">Current Size</div>
-          <div className="text-lg font-mono font-bold text-[var(--color-text)]">
-            {formatSize(latestSnapshot.totalSize)}
-          </div>
-        </div>
-        <div className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4">
-          <div className="text-xs text-[var(--color-text-muted)] mb-1">Total Change</div>
-          <div className={`text-lg font-mono font-bold flex items-center gap-1 ${isGrowing ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}`}>
-            {isGrowing ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
-            {isGrowing ? "+" : ""}{formatSize(Math.abs(totalChange))}
-          </div>
-        </div>
-        <div className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4">
-          <div className="text-xs text-[var(--color-text-muted)] mb-1">Avg. Daily Change</div>
-          <div className="text-lg font-mono font-bold text-[var(--color-text)]">
-            {result.totalTrend ? formatSize(Math.abs(result.totalTrend.growthRate)) + "/day" : "N/A"}
-          </div>
-        </div>
+        {[
+          {
+            label: "Current Size",
+            value: formatSize(latestSnapshot.totalSize),
+            color: "text-[var(--color-text)]",
+            icon: null,
+          },
+          {
+            label: "Total Change",
+            value: `${isGrowing ? "+" : ""}${formatSize(Math.abs(totalChange))}`,
+            color: isGrowing ? "text-[var(--color-danger)]" : "text-[var(--color-success)]",
+            icon: isGrowing ? <TrendingUp size={18} /> : <TrendingDown size={18} />,
+          },
+          {
+            label: "Avg. Daily Change",
+            value: result.totalTrend ? formatSize(Math.abs(result.totalTrend.growthRate)) + "/day" : "N/A",
+            color: "text-[var(--color-text)]",
+            icon: null,
+          },
+        ].map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...springs.smooth, delay: index * 0.05 }}
+          >
+            <div className="text-xs text-[var(--color-text-muted)] mb-1">{stat.label}</div>
+            <div className={`text-lg font-mono font-bold flex items-center gap-1 ${stat.color}`}>
+              {stat.icon}
+              {stat.value}
+            </div>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Simple bar chart */}
-      <div className="flex-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4 overflow-hidden">
+      {/* Recharts Area Chart */}
+      <motion.div
+        className="flex-1 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-4 overflow-hidden min-h-[250px]"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...springs.smooth, delay: 0.2 }}
+      >
         <h3 className="text-sm font-medium text-[var(--color-text)] mb-4">Usage Over Time</h3>
-        <div className="flex items-end gap-1 h-[calc(100%-2rem)]">
-          {snapshots.map((snapshot, index) => {
-            const height = maxSize > 0 ? (snapshot.totalSize / maxSize) * 100 : 0;
-            const isLatest = index === snapshots.length - 1;
-
-            return (
-              <div
-                key={snapshot.timestamp}
-                className="flex-1 flex flex-col items-center justify-end group"
-              >
-                <div
-                  className={`w-full rounded-t-sm transition-all ${
-                    isLatest
-                      ? "bg-[var(--color-accent)]"
-                      : "bg-[var(--color-accent)]/40 group-hover:bg-[var(--color-accent)]/60"
-                  }`}
-                  style={{ height: `${Math.max(height, 2)}%` }}
-                  title={`${formatDate(snapshot.timestamp)}: ${formatSize(snapshot.totalSize)}`}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex justify-between mt-2 text-xs text-[var(--color-text-muted)]">
-          <span>{formatDate(oldestSnapshot.timestamp)}</span>
-          <span>{formatDate(latestSnapshot.timestamp)}</span>
-        </div>
-      </div>
+        <ResponsiveContainer width="100%" height="85%">
+          <AreaChart
+            data={chartData}
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="colorSize" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--color-border)"
+              opacity={0.5}
+              vertical={false}
+            />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 11, fill: "var(--color-text-muted)" }}
+              tickLine={false}
+              axisLine={{ stroke: "var(--color-border)" }}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tickFormatter={(value) => formatSizeShort(value)}
+              tick={{ fontSize: 11, fill: "var(--color-text-muted)" }}
+              tickLine={false}
+              axisLine={false}
+              width={50}
+            />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-3 shadow-[var(--shadow-lg)]">
+                      <p className="text-xs text-[var(--color-text-muted)] mb-1">
+                        {data.fullDate}
+                      </p>
+                      <p className="text-sm font-mono font-bold text-[var(--color-accent)]">
+                        {data.formattedSize}
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="size"
+              stroke="var(--color-accent)"
+              strokeWidth={2}
+              fill="url(#colorSize)"
+              animationDuration={1000}
+              animationEasing="ease-out"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </motion.div>
 
       {/* Category trends */}
       {result.categoryTrends && result.categoryTrends.length > 0 && (
-        <div className="mt-6">
+        <motion.div
+          className="mt-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springs.smooth, delay: 0.3 }}
+        >
           <h3 className="text-sm font-medium text-[var(--color-text)] mb-3">Category Trends</h3>
           <div className="grid grid-cols-2 gap-3">
-            {result.categoryTrends.slice(0, 6).map((trend) => {
-              const isGrowing = trend.growthRate > 0;
+            {result.categoryTrends.slice(0, 6).map((trend, index) => {
+              const isTrendGrowing = trend.growthRate > 0;
               return (
-                <div
+                <motion.div
                   key={trend.categoryId}
-                  className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-3"
+                  className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-md)] p-3 hover:border-[var(--color-text-muted)] transition-colors"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ ...springs.smooth, delay: 0.35 + index * 0.03 }}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium text-[var(--color-text)] truncate">
                       {trend.categoryName}
                     </span>
-                    {isGrowing ? (
+                    {isTrendGrowing ? (
                       <TrendingUp size={14} className="text-[var(--color-danger)] flex-shrink-0" />
                     ) : (
                       <TrendingDown size={14} className="text-[var(--color-success)] flex-shrink-0" />
                     )}
                   </div>
-                  <div className={`text-xs font-mono ${isGrowing ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}`}>
-                    {isGrowing ? "+" : ""}{formatSize(Math.abs(trend.totalChange))}
+                  <div className={`text-xs font-mono ${isTrendGrowing ? "text-[var(--color-danger)]" : "text-[var(--color-success)]"}`}>
+                    {isTrendGrowing ? "+" : ""}{formatSize(Math.abs(trend.totalChange))}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -225,6 +309,15 @@ function formatSize(bytes: number): string {
   const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k));
   const value = bytes / Math.pow(k, i);
   return `${value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1) : value.toFixed(2)} ${sizes[i]}`;
+}
+
+function formatSizeShort(bytes: number): string {
+  if (bytes === 0) return "0";
+  const k = 1024;
+  const sizes = ["B", "K", "M", "G", "T"];
+  const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k));
+  const value = bytes / Math.pow(k, i);
+  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)}${sizes[i]}`;
 }
 
 function formatDate(date: string | Date): string {
