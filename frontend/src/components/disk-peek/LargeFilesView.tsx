@@ -1,10 +1,14 @@
 import { useState } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { FileBox, Trash2, Search, Loader2, FolderOpen, File, Clock } from "lucide-react";
 import { DeletePath } from "../../../wailsjs/go/main/App";
 
-interface Progress {
+interface ProgressData {
   scanned: number;
   current: string;
 }
@@ -13,13 +17,13 @@ interface LargeFilesViewProps {
   state: "idle" | "scanning" | "completed" | "error";
   result: scanner.LargeFilesResult | null;
   error: string | null;
-  progress: Progress | null;
+  progress: ProgressData | null;
   onScan: (minSizeMB?: number) => void;
   onReset: () => void;
 }
 
 export function LargeFilesView({ state, result, error, progress, onScan, onReset }: LargeFilesViewProps) {
-  const [minSizeMB, setMinSizeMB] = useState(100);
+  const [minSizeMB, setMinSizeMB] = useState("100");
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
   const [deletedPaths, setDeletedPaths] = useState<Set<string>>(new Set());
 
@@ -41,7 +45,7 @@ export function LargeFilesView({ state, result, error, progress, onScan, onReset
   if (state === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <div className="w-20 h-20 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--color-warning)]/20 to-[var(--color-warning)]/5 flex items-center justify-center mb-6">
+        <div className="w-20 h-20 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--color-warning)]/20 to-[var(--color-warning)]/5 flex items-center justify-center mb-6 shadow-lg shadow-[var(--color-warning)]/10">
           <FileBox size={40} className="text-[var(--color-warning)]" />
         </div>
         <h2 className="text-xl font-bold text-[var(--color-text)] mb-2">Find Large Files</h2>
@@ -51,23 +55,24 @@ export function LargeFilesView({ state, result, error, progress, onScan, onReset
 
         <div className="flex items-center gap-3 mb-6">
           <label className="text-sm text-[var(--color-text-secondary)]">Minimum size:</label>
-          <select
-            value={minSizeMB}
-            onChange={(e) => setMinSizeMB(Number(e.target.value))}
-            className="bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--color-text)] focus:outline-none focus:border-[var(--color-accent)]"
-          >
-            <option value={50}>50 MB</option>
-            <option value={100}>100 MB</option>
-            <option value={250}>250 MB</option>
-            <option value={500}>500 MB</option>
-            <option value={1000}>1 GB</option>
-          </select>
+          <Select value={minSizeMB} onValueChange={setMinSizeMB}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="50">50 MB</SelectItem>
+              <SelectItem value="100">100 MB</SelectItem>
+              <SelectItem value="250">250 MB</SelectItem>
+              <SelectItem value="500">500 MB</SelectItem>
+              <SelectItem value="1000">1 GB</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <Button
           size="lg"
-          onClick={() => onScan(minSizeMB)}
-          className="bg-gradient-to-r from-[var(--color-warning)] to-[var(--color-warning)]/80 hover:from-[var(--color-warning)]/90 hover:to-[var(--color-warning)]/70 text-white font-semibold rounded-[var(--radius-xl)] shadow-[var(--shadow-md)]"
+          onClick={() => onScan(Number(minSizeMB))}
+          className="bg-gradient-to-r from-[var(--color-warning)] to-[var(--color-warning)]/80 hover:from-[var(--color-warning)]/90 hover:to-[var(--color-warning)]/70 text-white font-semibold rounded-[var(--radius-xl)] shadow-[var(--shadow-md)] hover:shadow-lg hover:shadow-[var(--color-warning)]/20 transition-all"
         >
           <Search size={18} className="mr-2" />
           Find Large Files
@@ -89,12 +94,18 @@ export function LargeFilesView({ state, result, error, progress, onScan, onReset
           <FileBox size={32} className="text-[var(--color-warning)] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
         </div>
         <h2 className="text-lg font-semibold text-[var(--color-text)] mb-2">Scanning for large files...</h2>
-        <p className="text-sm text-[var(--color-text-muted)] mb-3">Looking for files larger than {minSizeMB} MB</p>
+        <p className="text-sm text-[var(--color-text-muted)] mb-4">Looking for files larger than {minSizeMB} MB</p>
+
+        {/* Progress indicator */}
+        <div className="w-64 mb-4">
+          <Progress value={undefined} className="h-1" indicatorClassName="animate-pulse bg-[var(--color-warning)]" />
+        </div>
+
         {progress && (
           <div className="text-center max-w-md">
-            <p className="text-sm font-mono text-[var(--color-warning)] mb-1">
+            <Badge variant="secondary" className="mb-2">
               {progress.scanned.toLocaleString()} files scanned
-            </p>
+            </Badge>
             <p className="text-xs text-[var(--color-text-muted)] truncate" title={currentPath}>
               {shortPath}
             </p>
@@ -127,7 +138,7 @@ export function LargeFilesView({ state, result, error, progress, onScan, onReset
         </div>
         <h2 className="text-lg font-semibold text-[var(--color-text)] mb-2">No Large Files Found</h2>
         <p className="text-sm text-[var(--color-text-muted)] mb-4">
-          No files larger than {formatSize(result?.threshold || minSizeMB * 1024 * 1024)} were found.
+          No files larger than {formatSize(result?.threshold || Number(minSizeMB) * 1024 * 1024)} were found.
         </p>
         <Button variant="outline" onClick={onReset}>
           Scan Again
@@ -143,13 +154,17 @@ export function LargeFilesView({ state, result, error, progress, onScan, onReset
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Large Files</h2>
+          <div className="flex items-center gap-3 mb-1">
+            <h2 className="text-xl font-bold text-[var(--color-text)]">Large Files</h2>
+            <Badge variant="warning" className="bg-[var(--color-warning)]/20 text-[var(--color-warning)] border-[var(--color-warning)]/30">
+              {visibleFiles.length} {visibleFiles.length === 1 ? "file" : "files"}
+            </Badge>
+          </div>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Found{" "}
+            Total size:{" "}
             <span className="font-mono font-bold text-[var(--color-warning)]">
               {formatSize(totalSize)}
-            </span>{" "}
-            across {visibleFiles.length} {visibleFiles.length === 1 ? "file" : "files"}
+            </span>
           </p>
         </div>
         <Button
@@ -168,11 +183,11 @@ export function LargeFilesView({ state, result, error, progress, onScan, onReset
           {visibleFiles.map((file, index) => (
             <div
               key={file.path}
-              className="flex items-center gap-3 p-3 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] hover:border-[var(--color-text-muted)]/50 transition-all"
+              className="category-card flex items-center gap-3 p-3 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] hover:border-[var(--color-text-muted)]/50 hover:bg-[var(--color-bg-hover)]/50 transition-all group"
               style={{ animationDelay: `${index * 30}ms` }}
             >
               {/* Icon */}
-              <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-warning)]/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-warning)]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--color-warning)]/20 transition-colors">
                 {file.isDir ? (
                   <FolderOpen size={20} className="text-[var(--color-warning)]" />
                 ) : (
@@ -199,20 +214,24 @@ export function LargeFilesView({ state, result, error, progress, onScan, onReset
                     </div>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => handleDelete(file.path)}
-                  disabled={deletingPath === file.path}
-                  className="hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
-                  title="Move to Trash"
-                >
-                  {deletingPath === file.path ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Trash2 size={16} />
-                  )}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleDelete(file.path)}
+                      disabled={deletingPath === file.path}
+                      className="hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)] opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      {deletingPath === file.path ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Move to Trash</TooltipContent>
+                </Tooltip>
               </div>
             </div>
           ))}

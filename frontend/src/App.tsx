@@ -18,6 +18,8 @@ import { useClean } from "@/hooks/useClean";
 import { useMenuEvents } from "@/hooks/useMenuEvents";
 import { RefreshCw, Clock, HardDrive, Sparkles, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 function App() {
   const [mode, setMode] = useState<ScanMode>("dev");
@@ -105,6 +107,7 @@ function App() {
   });
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="h-screen flex flex-col bg-[var(--color-bg)] noise-overlay">
       {/* Header */}
       <header className="flex-shrink-0 px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)]/50">
@@ -151,10 +154,10 @@ function App() {
                   Scan again
                 </Button>
                 {result && (
-                  <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-elevated)] px-3 py-1.5 rounded-full border border-[var(--color-border)]">
+                  <Badge variant="ghost" className="gap-1.5">
                     <Clock size={12} />
                     <span className="font-mono">{formatDuration(result.scanDuration)}</span>
-                  </div>
+                  </Badge>
                 )}
               </>
             )}
@@ -267,15 +270,16 @@ function App() {
               }
             </span>
           </div>
-          <span className="text-xs text-[var(--color-text-muted)] font-mono bg-[var(--color-bg-elevated)] px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)]">
-            v0.1.0
-          </span>
+          <Badge variant="outline" className="font-mono text-xs">
+            v0.2.0
+          </Badge>
         </div>
       </footer>
 
       {/* Settings Panel */}
       <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
     </div>
+    </TooltipProvider>
   );
 }
 
