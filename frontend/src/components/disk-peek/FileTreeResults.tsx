@@ -2,10 +2,17 @@ import { useState, useMemo, useCallback } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
-import { ArrowLeft, Folder, File, ChevronRight, FolderOpen, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Folder, File, ChevronRight, FolderOpen, Loader2, Trash2, Search, X, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GetDirectoryChildren, DeletePath } from "../../../wailsjs/go/main/App";
 import { formatSize } from "@/lib/formatters";
+import { exportToJSON, exportFileTreeToCSV } from "@/lib/export";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface BreadcrumbItem {
   id: string;
@@ -56,6 +63,9 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Search/filter state
+  const [searchQuery, setSearchQuery] = useState("");
+
   const currentLevel = navigationStack[navigationStack.length - 1];
 
   // Calculate total size for current level
@@ -68,9 +78,20 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
     return [...currentChildren].sort((a, b) => b.size - a.size);
   }, [currentChildren]);
 
+  // Filter children by search query
+  const filteredChildren = useMemo(() => {
+    if (!searchQuery.trim()) return sortedChildren;
+    const query = searchQuery.toLowerCase().trim();
+    return sortedChildren.filter((node) =>
+      node.name.toLowerCase().includes(query)
+    );
+  }, [sortedChildren, searchQuery]);
+
+  // Clear search when navigating
   const handleNodeClick = useCallback(async (node: scanner.FileNode) => {
     if (!node.isDir) return;
 
+    setSearchQuery(""); // Clear search on navigation
     setIsLoading(true);
     try {
       const children = await GetDirectoryChildren(node.path);
@@ -87,6 +108,7 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
   }, []);
 
   const handleBreadcrumbNavigate = useCallback(async (index: number) => {
+    setSearchQuery(""); // Clear search on navigation
     const target = navigationStack[index];
     if (index === 0) {
       // Go back to root
@@ -191,6 +213,25 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
     name: item.name,
   }));
 
+  // Export handlers
+  const handleExportJSON = () => {
+    const timestamp = new Date().toISOString().split("T")[0];
+    exportToJSON(
+      {
+        exportedAt: new Date().toISOString(),
+        currentPath: currentLevel.path,
+        totalSize: currentTotalSize,
+        items: sortedChildren,
+      },
+      `disk-peek-explorer-${timestamp}`
+    );
+  };
+
+  const handleExportCSV = () => {
+    const timestamp = new Date().toISOString().split("T")[0];
+    exportFileTreeToCSV(sortedChildren, currentLevel.path, `disk-peek-explorer-${timestamp}`);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header with total size */}
@@ -207,18 +248,45 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
           </p>
         </div>
 
-        {navigationStack.length > 1 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleBack}
-            className="gap-2 bg-[var(--color-bg-elevated)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-text-muted)] rounded-[var(--radius-lg)]"
-            disabled={isLoading}
-          >
-            <ArrowLeft size={16} />
-            Back
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Export dropdown */}
+          {sortedChildren.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 bg-[var(--color-bg-elevated)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-text-muted)] rounded-[var(--radius-lg)]"
+                >
+                  <Download size={16} />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[var(--color-bg-elevated)] border-[var(--color-border)]">
+                <DropdownMenuItem onClick={handleExportJSON} className="cursor-pointer">
+                  Export as JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer">
+                  Export as CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Back button */}
+          {navigationStack.length > 1 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBack}
+              className="gap-2 bg-[var(--color-bg-elevated)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-text-muted)] rounded-[var(--radius-lg)]"
+              disabled={isLoading}
+            >
+              <ArrowLeft size={16} />
+              Back
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Breadcrumbs */}
@@ -228,6 +296,38 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
           onNavigate={handleBreadcrumbNavigate}
         />
       </div>
+
+      {/* Search input */}
+      {sortedChildren.length > 0 && (
+        <div className="mb-5">
+          <div className="relative">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+            />
+            <input
+              type="text"
+              placeholder="Filter files and folders..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-10 pl-9 pr-9 bg-[var(--color-bg-elevated)] border border-[var(--color-border)] rounded-[var(--radius-lg)] text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/50 focus:border-[var(--color-accent)] transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <p className="text-xs text-[var(--color-text-muted)] mt-2">
+              Showing {filteredChildren.length} of {sortedChildren.length} items
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Stacked bar for current directory */}
       <div className="mb-6">
@@ -248,17 +348,25 @@ export function FileTreeResults({ result }: FileTreeResultsProps) {
             </div>
             <p className="text-[var(--color-text-muted)]">Loading folder...</p>
           </div>
-        ) : sortedChildren.length === 0 ? (
+        ) : filteredChildren.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-[var(--color-text-muted)]">
             <div className="w-20 h-20 rounded-[var(--radius-xl)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center mb-4">
-              <FolderOpen size={36} className="text-[var(--color-text-muted)]" />
+              {searchQuery ? (
+                <Search size={36} className="text-[var(--color-text-muted)]" />
+              ) : (
+                <FolderOpen size={36} className="text-[var(--color-text-muted)]" />
+              )}
             </div>
-            <p className="text-base font-medium text-[var(--color-text-secondary)]">This folder is empty</p>
-            <p className="text-sm mt-1">Nothing to see here</p>
+            <p className="text-base font-medium text-[var(--color-text-secondary)]">
+              {searchQuery ? "No matches found" : "This folder is empty"}
+            </p>
+            <p className="text-sm mt-1">
+              {searchQuery ? `Try a different search term` : "Nothing to see here"}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
-            {sortedChildren.map((node, index) => (
+            {filteredChildren.map((node, index) => (
               <div
                 key={node.path}
                 onMouseEnter={() => setHighlightedId(node.path)}

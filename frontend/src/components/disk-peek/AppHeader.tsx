@@ -1,4 +1,4 @@
-import { RefreshCw, Clock, HardDrive, Sparkles, Settings } from "lucide-react";
+import { RefreshCw, Clock, HardDrive, Sparkles, Settings, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -16,6 +16,7 @@ interface AppHeaderProps {
   scanDuration?: number;
   onReset: () => void;
   onOpenSettings: () => void;
+  onCompactMode?: () => void;
 }
 
 export function AppHeader({
@@ -28,6 +29,7 @@ export function AppHeader({
   scanDuration,
   onReset,
   onOpenSettings,
+  onCompactMode,
 }: AppHeaderProps) {
   return (
     <header className="flex-shrink-0 px-6 py-4 border-b border-[var(--color-border)]/50 glass-subtle">
@@ -109,6 +111,18 @@ export function AppHeader({
             </>
           )}
           <ThemeToggle />
+          {onCompactMode && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onCompactMode}
+              disabled={isBusy}
+              className="w-9 h-9 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)]"
+              title="Compact Mode (⌘+Shift+M)"
+            >
+              <Minimize2 size={18} className="text-[var(--color-text-muted)]" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"

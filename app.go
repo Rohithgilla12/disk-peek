@@ -700,3 +700,23 @@ func (a *App) InstallUpdate(dmgPath string) error {
 func (a *App) OpenReleasePage(url string) error {
 	return updater.OpenReleasePage(url)
 }
+
+// --- Window Control Methods ---
+
+// SetCompactMode resizes the window to compact mode
+func (a *App) SetCompactMode() {
+	runtime.WindowSetSize(a.ctx, 380, 480)
+	runtime.WindowCenter(a.ctx)
+}
+
+// SetFullMode resizes the window to full mode
+func (a *App) SetFullMode() {
+	runtime.WindowSetSize(a.ctx, 1024, 768)
+	runtime.WindowCenter(a.ctx)
+}
+
+// IsCompactMode returns whether the window is in compact mode
+func (a *App) IsCompactMode() bool {
+	width, _ := runtime.WindowGetSize(a.ctx)
+	return width < 500
+}

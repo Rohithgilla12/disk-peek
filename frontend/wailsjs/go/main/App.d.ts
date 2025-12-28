@@ -87,3 +87,9 @@ export function ScanNormalPath(arg1:string):Promise<scanner.FullScanResult>;
 export function SetCategoryEnabled(arg1:string,arg2:boolean):Promise<void>;
 
 export function SetPermanentDelete(arg1:boolean):Promise<void>;
+
+export function SetCompactMode():Promise<void>;
+
+export function SetFullMode():Promise<void>;
+
+export function IsCompactMode():Promise<boolean>;

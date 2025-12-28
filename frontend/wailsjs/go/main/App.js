@@ -165,3 +165,15 @@ export function SetCategoryEnabled(arg1, arg2) {
 export function SetPermanentDelete(arg1) {
   return window['go']['main']['App']['SetPermanentDelete'](arg1);
 }
+
+export function SetCompactMode() {
+  return window['go']['main']['App']['SetCompactMode']();
+}
+
+export function SetFullMode() {
+  return window['go']['main']['App']['SetFullMode']();
+}
+
+export function IsCompactMode() {
+  return window['go']['main']['App']['IsCompactMode']();
+}

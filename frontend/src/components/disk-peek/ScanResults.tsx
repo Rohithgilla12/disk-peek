@@ -5,11 +5,18 @@ import { DonutChart } from "./DonutChart";
 import { Treemap } from "./Treemap";
 import { CategoryCard } from "./CategoryCard";
 import { Breadcrumbs } from "./Breadcrumbs";
-import { ArrowLeft, Trash2, Sparkles, PartyPopper, PieChart, LayoutGrid } from "lucide-react";
+import { ArrowLeft, Trash2, Sparkles, PartyPopper, PieChart, LayoutGrid, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatedSize } from "@/components/ui/animated-counter";
 import { motion, AnimatePresence } from "framer-motion";
 import { springs } from "@/components/ui/motion";
+import { exportToJSON, exportDevResultsToCSV } from "@/lib/export";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ChartView = "donut" | "treemap";
 
@@ -78,6 +85,24 @@ export function ScanResults({ result, onClean, onSelectionChange }: ScanResultsP
     setHighlightedCategoryId(category?.id || null);
   };
 
+  // Export handlers
+  const handleExportJSON = () => {
+    const timestamp = new Date().toISOString().split("T")[0];
+    exportToJSON(
+      {
+        exportedAt: new Date().toISOString(),
+        totalSize: currentTotalSize,
+        categories: sortedCategories,
+      },
+      `disk-peek-dev-scan-${timestamp}`
+    );
+  };
+
+  const handleExportCSV = () => {
+    const timestamp = new Date().toISOString().split("T")[0];
+    exportDevResultsToCSV(sortedCategories, `disk-peek-dev-scan-${timestamp}`);
+  };
+
   const breadcrumbItems = navigationStack.map((item) => ({
     id: item.id,
     name: item.name,
@@ -122,23 +147,48 @@ export function ScanResults({ result, onClean, onSelectionChange }: ScanResultsP
           </p>
         </div>
 
-        {!isRootLevel && (
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={springs.smooth}
-          >
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBack}
-              className="gap-2 bg-[var(--color-bg-elevated)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-text-muted)] rounded-[var(--radius-lg)]"
+        <div className="flex items-center gap-2">
+          {/* Export dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-[var(--color-bg-elevated)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-text-muted)] rounded-[var(--radius-lg)]"
+              >
+                <Download size={16} />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-[var(--color-bg-elevated)] border-[var(--color-border)]">
+              <DropdownMenuItem onClick={handleExportJSON} className="cursor-pointer">
+                Export as JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer">
+                Export as CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Back button */}
+          {!isRootLevel && (
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={springs.smooth}
             >
-              <ArrowLeft size={16} />
-              Back
-            </Button>
-          </motion.div>
-        )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBack}
+                className="gap-2 bg-[var(--color-bg-elevated)] border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] hover:border-[var(--color-text-muted)] rounded-[var(--radius-lg)]"
+              >
+                <ArrowLeft size={16} />
+                Back
+              </Button>
+            </motion.div>
+          )}
+        </div>
       </motion.div>
 
       {/* Breadcrumbs */}

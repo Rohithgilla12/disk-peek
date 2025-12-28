@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import "@/index.css";
 import {
   EmptyState,
@@ -11,12 +11,15 @@ import {
   ToolsPanel,
   AppHeader,
   AppFooter,
+  CompactView,
   type ScanMode,
 } from "@/components/disk-peek";
 import type { scanner } from "../wailsjs/go/models";
 import { useScan } from "@/hooks/useScan";
 import { useClean } from "@/hooks/useClean";
 import { useMenuEvents } from "@/hooks/useMenuEvents";
+import { useNotifications } from "@/hooks/useNotifications";
+import { IsCompactMode, SetCompactMode, SetFullMode } from "../wailsjs/go/main/App";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,7 +28,46 @@ import { springs } from "@/components/ui/motion";
 function App() {
   const [mode, setMode] = useState<ScanMode>("dev");
   const [showSettings, setShowSettings] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
   const { state: scanState, result, progress: scanProgress, error: scanError, scan, quickScan, cancel: cancelScan, reset: resetScan } = useScan(mode);
+
+  // Check if in compact mode on mount and window resize
+  useEffect(() => {
+    const checkCompactMode = async () => {
+      try {
+        const compact = await IsCompactMode();
+        setIsCompact(compact);
+      } catch {
+        // Ignore errors during initial load
+      }
+    };
+    checkCompactMode();
+
+    // Listen for window resize
+    const handleResize = () => {
+      setIsCompact(window.innerWidth < 500);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Keyboard shortcut to toggle compact mode (Cmd/Ctrl + Shift + M)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        if (isCompact) {
+          SetFullMode();
+          setIsCompact(false);
+        } else {
+          SetCompactMode();
+          setIsCompact(true);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCompact]);
   const {
     state: cleanState,
     result: cleanResult,
@@ -35,6 +77,9 @@ function App() {
     cancel: cancelClean,
     reset: resetClean
   } = useClean();
+
+  // Enable system notifications for scan/clean events
+  useNotifications({ enabled: true });
 
   // Ref to ScanResults for programmatic clean trigger
   const selectedCategoriesRef = useRef<string[]>([]);
@@ -107,6 +152,15 @@ function App() {
     onCancel: handleCancel,
   });
 
+  // Render compact view if in compact mode
+  if (isCompact) {
+    return (
+      <ThemeProvider defaultTheme="system">
+        <CompactView />
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider defaultTheme="system">
       <TooltipProvider delayDuration={300}>
@@ -122,6 +176,10 @@ function App() {
             scanDuration={result?.scanDuration}
             onReset={resetScan}
             onOpenSettings={() => setShowSettings(true)}
+            onCompactMode={() => {
+              SetCompactMode();
+              setIsCompact(true);
+            }}
           />
 
           {/* Main Content */}
