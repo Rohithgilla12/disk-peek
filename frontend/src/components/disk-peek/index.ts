@@ -19,3 +19,4 @@ export { TrendsView } from "./TrendsView";
 export { ToolsPanel } from "./ToolsPanel";
 export { AppHeader } from "./AppHeader";
 export { AppFooter } from "./AppFooter";
+export { UpdateDialog } from "./UpdateDialog";

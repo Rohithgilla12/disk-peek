@@ -72,6 +72,11 @@ func createApplicationMenu(app *App) *menu.Menu {
 		// Emit event to frontend to open settings
 		wailsRuntime.EventsEmit(app.ctx, "menu:settings")
 	})
+	fileMenu.AddSeparator()
+	fileMenu.AddText("Check for Updates...", keys.CmdOrCtrl("u"), func(_ *menu.CallbackData) {
+		// Emit event to frontend to check for updates
+		wailsRuntime.EventsEmit(app.ctx, "menu:update")
+	})
 
 	// On macOS, Edit menu enables standard shortcuts (Cmd+C, Cmd+V, Cmd+Z)
 	if runtime.GOOS == "darwin" {

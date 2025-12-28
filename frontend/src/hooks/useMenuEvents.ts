@@ -9,6 +9,7 @@ interface MenuEventCallbacks {
   onSettings: () => void;
   onModeChange: (mode: ScanMode) => void;
   onCancel: () => void;
+  onCheckUpdate: () => void;
 }
 
 export function useMenuEvents(callbacks: MenuEventCallbacks) {
@@ -49,6 +50,11 @@ export function useMenuEvents(callbacks: MenuEventCallbacks) {
       callbacksRef.current.onCancel();
     });
 
+    // Check for updates (Cmd+U)
+    const unsubscribeUpdate = EventsOn("menu:update", () => {
+      callbacksRef.current.onCheckUpdate();
+    });
+
     return () => {
       unsubscribeScan();
       unsubscribeQuickScan();
@@ -56,6 +62,7 @@ export function useMenuEvents(callbacks: MenuEventCallbacks) {
       unsubscribeSettings();
       unsubscribeMode();
       unsubscribeCancel();
+      unsubscribeUpdate();
     };
   }, []);
 }

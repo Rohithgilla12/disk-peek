@@ -11,6 +11,7 @@ import {
   ToolsPanel,
   AppHeader,
   AppFooter,
+  UpdateDialog,
   type ScanMode,
 } from "@/components/disk-peek";
 import type { scanner } from "../wailsjs/go/models";
@@ -25,6 +26,7 @@ import { springs } from "@/components/ui/motion";
 function App() {
   const [mode, setMode] = useState<ScanMode>("dev");
   const [showSettings, setShowSettings] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const { state: scanState, result, progress: scanProgress, error: scanError, scan, quickScan, cancel: cancelScan, reset: resetScan } = useScan(mode);
   const {
     state: cleanState,
@@ -105,6 +107,9 @@ function App() {
     },
     onModeChange: handleModeChange,
     onCancel: handleCancel,
+    onCheckUpdate: () => {
+      setShowUpdateDialog(true);
+    },
   });
 
   return (
@@ -211,6 +216,9 @@ function App() {
 
           {/* Settings Panel */}
           <SettingsPanel open={showSettings} onClose={() => setShowSettings(false)} />
+
+          {/* Update Dialog */}
+          <UpdateDialog open={showUpdateDialog} onClose={() => setShowUpdateDialog(false)} />
         </div>
       </TooltipProvider>
     </ThemeProvider>
