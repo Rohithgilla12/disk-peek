@@ -21,14 +21,14 @@ interface TreemapNode {
 }
 
 interface TreemapContentProps {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  name: string;
-  size: number;
-  color: string;
-  originalCategory: scanner.Category;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  name?: string;
+  size?: number;
+  color?: string;
+  originalCategory?: scanner.Category;
 }
 
 interface TreemapTooltipProps {
@@ -63,7 +63,7 @@ export function Treemap({ categories, totalSize, onCategoryClick, height = 300 }
   }, [categories]);
 
   const CustomContent = (props: TreemapContentProps) => {
-    const { x, y, width, height, name, color, originalCategory } = props;
+    const { x = 0, y = 0, width = 0, height = 0, name = "", color = "", originalCategory, size = 0 } = props;
 
     if (width < 30 || height < 30) return null;
 
@@ -125,7 +125,7 @@ export function Treemap({ categories, totalSize, onCategoryClick, height = 300 }
             fontSize={fontSize - 2}
             style={{ pointerEvents: "none" }}
           >
-            {formatSize(props.size)}
+            {formatSize(size)}
           </text>
         )}
       </g>
@@ -158,9 +158,9 @@ export function Treemap({ categories, totalSize, onCategoryClick, height = 300 }
           <span className="mx-1">•</span>
           <span>{percentage}%</span>
         </div>
-        {data.originalCategory?.children?.length > 0 && (
+        {(data.originalCategory?.children?.length ?? 0) > 0 && (
           <div className="text-xs text-[var(--color-text-muted)] mt-1.5 pt-1.5 border-t border-[var(--color-border)]">
-            Click to explore {data.originalCategory.children.length} sub-categories
+            Click to explore {data.originalCategory?.children?.length} sub-categories
           </div>
         )}
       </motion.div>
