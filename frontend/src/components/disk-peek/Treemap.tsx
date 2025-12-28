@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
 import { Treemap as RechartsTreemap, ResponsiveContainer, Tooltip } from "recharts";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { springs } from "@/components/ui/motion";
+import { formatSize } from "@/lib/formatters";
 
 interface TreemapProps {
   categories: scanner.Category[];
@@ -17,6 +18,22 @@ interface TreemapNode {
   originalCategory: scanner.Category;
   color: string;
   children?: TreemapNode[];
+}
+
+interface TreemapContentProps {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  name: string;
+  size: number;
+  color: string;
+  originalCategory: scanner.Category;
+}
+
+interface TreemapTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: TreemapNode }>;
 }
 
 // Premium color palette
@@ -45,7 +62,7 @@ export function Treemap({ categories, totalSize, onCategoryClick, height = 300 }
     }));
   }, [categories]);
 
-  const CustomContent = (props: any) => {
+  const CustomContent = (props: TreemapContentProps) => {
     const { x, y, width, height, name, color, originalCategory } = props;
 
     if (width < 30 || height < 30) return null;
@@ -115,7 +132,7 @@ export function Treemap({ categories, totalSize, onCategoryClick, height = 300 }
     );
   };
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: TreemapTooltipProps) => {
     if (!active || !payload || !payload.length) return null;
 
     const data = payload[0].payload;
@@ -184,13 +201,4 @@ export function Treemap({ categories, totalSize, onCategoryClick, height = 300 }
       </ResponsiveContainer>
     </motion.div>
   );
-}
-
-function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(Math.abs(bytes)) / Math.log(k));
-  const value = bytes / Math.pow(k, i);
-  return `${value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1) : value.toFixed(2)} ${sizes[i]}`;
 }
