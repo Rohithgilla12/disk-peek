@@ -1,5 +1,9 @@
 import { useMemo } from "react";
 import type { scanner } from "../../../wailsjs/go/models";
+import { motion } from "framer-motion";
+import { springs } from "@/components/ui/motion";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface StackedBarProps {
   categories: scanner.Category[];
@@ -23,7 +27,7 @@ export function StackedBar({
 
   if (totalSize === 0) {
     return (
-      <div className="h-8 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center">
+      <div className="h-10 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)] border border-[var(--color-border)] flex items-center justify-center glass-subtle">
         <span className="text-sm text-[var(--color-text-muted)]">
           No data to display
         </span>
@@ -34,7 +38,7 @@ export function StackedBar({
   return (
     <div className="space-y-4">
       {/* Main stacked bar */}
-      <div className="h-8 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)]/50 overflow-hidden flex">
+      <div className="h-10 rounded-[var(--radius-lg)] bg-[var(--color-bg-elevated)]/50 overflow-hidden flex shadow-inner border border-[var(--color-border)]/30">
         {visibleCategories.map((category, index) => {
           const percentage = (category.size / totalSize) * 100;
           // Don't render segments smaller than 0.5%
@@ -45,83 +49,119 @@ export function StackedBar({
             highlightedId && highlightedId !== category.id;
 
           return (
-            <div
-              key={category.id}
-              className="bar-segment relative group first:rounded-l-[var(--radius-md)] last:rounded-r-[var(--radius-md)]"
-              style={{
-                width: `${percentage}%`,
-                background: `linear-gradient(180deg, ${category.color} 0%, ${category.color}dd 100%)`,
-                opacity: isOtherHighlighted ? 0.3 : 1,
-                transform: isHighlighted ? "scaleY(1.15)" : "scaleY(1)",
-                animationDelay: `${index * 50}ms`,
-                zIndex: isHighlighted ? 10 : 1,
-              }}
-              onClick={() => onCategoryClick?.(category)}
-              title={`${category.name}: ${formatSize(category.size)} (${percentage.toFixed(1)}%)`}
-            >
-              {/* Hover tooltip */}
-              <div
-                className="
-                  absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2
-                  bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[var(--radius-md)]
-                  text-xs font-medium whitespace-nowrap
-                  opacity-0 group-hover:opacity-100 pointer-events-none
-                  transition-all duration-200
-                  shadow-[var(--shadow-lg)]
-                  z-50
-                "
-              >
-                <div className="flex items-center gap-2">
+            <Tooltip key={category.id}>
+              <TooltipTrigger asChild>
+                <motion.div
+                  className="relative cursor-pointer first:rounded-l-[var(--radius-md)] last:rounded-r-[var(--radius-md)]"
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: `${percentage}%`,
+                    opacity: isOtherHighlighted ? 0.3 : 1,
+                    scaleY: isHighlighted ? 1.1 : 1,
+                  }}
+                  transition={{
+                    width: { duration: 0.6, delay: index * 0.05, ease: [0.16, 1, 0.3, 1] },
+                    opacity: springs.snappy,
+                    scaleY: springs.snappy
+                  }}
+                  whileHover={{
+                    scaleY: 1.15,
+                    filter: "brightness(1.1)",
+                    zIndex: 10,
+                  }}
+                  whileTap={{ scaleY: 0.95 }}
+                  style={{
+                    background: `linear-gradient(180deg, ${category.color} 0%, ${category.color}cc 100%)`,
+                    zIndex: isHighlighted ? 10 : 1,
+                  }}
+                  onClick={() => onCategoryClick?.(category)}
+                >
+                  {/* Shine effect */}
+                  <div
+                    className="absolute inset-0 opacity-30"
+                    style={{
+                      background: `linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%)`,
+                    }}
+                  />
+                </motion.div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="glass-strong">
+                <div className="flex items-center gap-2 mb-1">
                   <span
                     className="w-2.5 h-2.5 rounded-sm"
                     style={{ backgroundColor: category.color }}
                   />
-                  <span className="text-[var(--color-text)]">{category.name}</span>
+                  <span className="font-medium text-[var(--color-text)]">{category.name}</span>
                 </div>
-                <div className="text-[var(--color-text-secondary)] mt-1">
+                <div className="text-[var(--color-text-secondary)]">
                   {formatSize(category.size)} ({percentage.toFixed(1)}%)
                 </div>
-              </div>
-            </div>
+              </TooltipContent>
+            </Tooltip>
           );
         })}
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-3">
+      <motion.div
+        className="flex flex-wrap gap-2"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.03, delayChildren: 0.3 }
+          }
+        }}
+      >
         {visibleCategories.slice(0, 8).map((category) => {
+          const percentage = (category.size / totalSize) * 100;
           const isHighlighted = highlightedId === category.id;
           const isOtherHighlighted =
             highlightedId && highlightedId !== category.id;
 
           return (
-            <button
+            <motion.button
               key={category.id}
+              variants={{
+                hidden: { opacity: 0, y: 10 },
+                visible: { opacity: 1, y: 0 }
+              }}
+              transition={springs.smooth}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.98 }}
               className={`
-                flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-full
-                transition-all duration-200
+                flex items-center gap-2 text-xs px-3 py-1.5 rounded-full
+                transition-colors duration-200 border
                 ${isHighlighted
-                  ? "bg-[var(--color-bg-hover)] text-[var(--color-text)]"
-                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-elevated)]"
+                  ? "bg-[var(--color-bg-hover)] text-[var(--color-text)] border-[var(--color-text-muted)]/30"
+                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-elevated)] border-transparent"
                 }
                 ${isOtherHighlighted ? "opacity-40" : "opacity-100"}
               `}
               onClick={() => onCategoryClick?.(category)}
             >
               <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: category.color }}
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
+                style={{
+                  backgroundColor: category.color,
+                  boxShadow: isHighlighted ? `0 0 8px ${category.color}60` : undefined
+                }}
               />
-              <span className="truncate max-w-[100px]">{category.name}</span>
-            </button>
+              <span className="truncate max-w-[100px] font-medium">{category.name}</span>
+              <span className="text-[var(--color-text-muted)] font-mono text-[10px]">
+                {percentage.toFixed(0)}%
+              </span>
+            </motion.button>
           );
         })}
         {visibleCategories.length > 8 && (
-          <span className="text-xs text-[var(--color-text-muted)] px-2 py-1.5">
+          <Badge variant="ghost" className="text-xs">
             +{visibleCategories.length - 8} more
-          </span>
+          </Badge>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

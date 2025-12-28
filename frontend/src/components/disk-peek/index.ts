@@ -1,5 +1,7 @@
 export { ModeToggle, type ScanMode } from "./ModeToggle";
 export { StackedBar } from "./StackedBar";
+export { DonutChart } from "./DonutChart";
+export { Treemap } from "./Treemap";
 export { CategoryCard } from "./CategoryCard";
 export { CategoryIcon } from "./CategoryIcon";
 export { Breadcrumbs } from "./Breadcrumbs";
@@ -15,3 +17,5 @@ export { LargeFilesView } from "./LargeFilesView";
 export { DuplicatesView } from "./DuplicatesView";
 export { TrendsView } from "./TrendsView";
 export { ToolsPanel } from "./ToolsPanel";
+export { AppHeader } from "./AppHeader";
+export { AppFooter } from "./AppFooter";

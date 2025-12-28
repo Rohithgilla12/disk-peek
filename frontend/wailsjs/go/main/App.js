@@ -10,6 +10,10 @@ export function CancelScan() {
   return window['go']['main']['App']['CancelScan']();
 }
 
+export function CheckForUpdate() {
+  return window['go']['main']['App']['CheckForUpdate']();
+}
+
 export function CleanCategories(arg1) {
   return window['go']['main']['App']['CleanCategories'](arg1);
 }
@@ -36,6 +40,10 @@ export function DeletePath(arg1, arg2) {
 
 export function DeletePaths(arg1, arg2) {
   return window['go']['main']['App']['DeletePaths'](arg1, arg2);
+}
+
+export function DownloadUpdate(arg1) {
+  return window['go']['main']['App']['DownloadUpdate'](arg1);
 }
 
 export function FindDuplicates() {
@@ -94,6 +102,14 @@ export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
 
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
+}
+
+export function InstallUpdate(arg1) {
+  return window['go']['main']['App']['InstallUpdate'](arg1);
+}
+
 export function IsCategoryEnabled(arg1) {
   return window['go']['main']['App']['IsCategoryEnabled'](arg1);
 }
@@ -104,6 +120,10 @@ export function LoadCachedDevScan() {
 
 export function LoadCachedNormalScan() {
   return window['go']['main']['App']['LoadCachedNormalScan']();
+}
+
+export function OpenReleasePage(arg1) {
+  return window['go']['main']['App']['OpenReleasePage'](arg1);
 }
 
 export function QuickScanDev() {
