@@ -720,3 +720,34 @@ func (a *App) IsCompactMode() bool {
 	width, _ := runtime.WindowGetSize(a.ctx)
 	return width < 500
 }
+
+// --- Recommendations Methods ---
+
+// GetRecommendations generates smart cleanup recommendations based on scan results
+func (a *App) GetRecommendations() scanner.RecommendationsResult {
+	// Load cached scan result
+	cachedScan := cache.LoadDevScan()
+	if cachedScan == nil {
+		// Return empty result if no scan data
+		return scanner.RecommendationsResult{}
+	}
+
+	// Load trends for growth-based recommendations
+	tm, err := scanner.NewTrendsManager()
+	var trendsResult *scanner.TrendsResult
+	if err == nil {
+		trends := tm.GetTrends(scanner.GetCategories())
+		trendsResult = &trends
+	}
+
+	return scanner.GenerateRecommendations(cachedScan.Result, trendsResult)
+}
+
+// GetQuickRecommendations returns top 5 high-priority recommendations
+func (a *App) GetQuickRecommendations() []scanner.Recommendation {
+	result := a.GetRecommendations()
+	if len(result.Recommendations) > 5 {
+		return result.Recommendations[:5]
+	}
+	return result.Recommendations
+}

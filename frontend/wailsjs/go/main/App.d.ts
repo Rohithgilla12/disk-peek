@@ -93,3 +93,7 @@ export function SetCompactMode():Promise<void>;
 export function SetFullMode():Promise<void>;
 
 export function IsCompactMode():Promise<boolean>;
+
+export function GetRecommendations():Promise<scanner.RecommendationsResult>;
+
+export function GetQuickRecommendations():Promise<scanner.Recommendation[]>;

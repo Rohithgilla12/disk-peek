@@ -177,3 +177,11 @@ export function SetFullMode() {
 export function IsCompactMode() {
   return window['go']['main']['App']['IsCompactMode']();
 }
+
+export function GetRecommendations() {
+  return window['go']['main']['App']['GetRecommendations']();
+}
+
+export function GetQuickRecommendations() {
+  return window['go']['main']['App']['GetQuickRecommendations']();
+}
